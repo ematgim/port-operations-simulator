@@ -1,15 +1,11 @@
 import { Vessel, VesselType, VesselStatus } from '../models/vessel.model';
 import { Position } from '../models/tugboat.model';
+import { PortService } from './port.service';
 
 export class VesselService {
   private vessels: Map<string, Vessel> = new Map();
   private vesselIdCounter = 1;
-  private portBounds = {
-    minX: 0,
-    maxX: 1000,
-    minY: 0,
-    maxY: 1000,
-  };
+  private portService: PortService;
 
   private vesselNames = [
     'MSC Maria',
@@ -25,6 +21,10 @@ export class VesselService {
   ];
 
   private usedNames: Set<string> = new Set();
+
+  constructor(portService: PortService) {
+    this.portService = portService;
+  }
 
   generateVessel(): Vessel {
     const availableNames = this.vesselNames.filter(
@@ -43,29 +43,25 @@ export class VesselService {
       id: `V${this.vesselIdCounter++}`,
       name,
       type: this.randomVesselType(),
-      position: this.randomPosition(),
-      status: VesselStatus.REQUESTING_ASSISTANCE,
+      position: this.getEntryPointPosition(),
+      status: VesselStatus.ARRIVING,
       requestTime: new Date(),
     };
 
     this.vessels.set(vessel.id, vessel);
     console.log(
-      `🚢 New vessel requesting assistance: ${vessel.name} (${vessel.type}) at (${vessel.position.x}, ${vessel.position.y})`
+      `🚢 New vessel arriving at port: ${vessel.name} (${vessel.type}) at entry point`
     );
 
     return vessel;
   }
 
-  private randomPosition(): Position {
+  private getEntryPointPosition(): Position {
+    const entryPoint = this.portService.getEntryPoint();
+    // Añadir pequeña variación aleatoria para que no estén exactamente en el mismo punto
     return {
-      x: Math.floor(
-        Math.random() * (this.portBounds.maxX - this.portBounds.minX) +
-          this.portBounds.minX
-      ),
-      y: Math.floor(
-        Math.random() * (this.portBounds.maxY - this.portBounds.minY) +
-          this.portBounds.minY
-      ),
+      x: entryPoint.position.x + (Math.random() - 0.5) * 20,
+      y: entryPoint.position.y + (Math.random() - 0.5) * 20,
     };
   }
 
@@ -87,13 +83,25 @@ export class VesselService {
 
   getVesselsRequestingAssistance(): Vessel[] {
     return Array.from(this.vessels.values()).filter(
-      (v) => v.status === VesselStatus.REQUESTING_ASSISTANCE
+      (v) => v.status === VesselStatus.REQUESTING_ASSISTANCE || v.status === VesselStatus.ARRIVING
     );
   }
 
   getVesselsWaitingForTugboat(): Vessel[] {
     return Array.from(this.vessels.values()).filter(
       (v) => v.status === VesselStatus.WAITING_FOR_TUGBOAT
+    );
+  }
+
+  getVesselsWaitingForDeparture(): Vessel[] {
+    return Array.from(this.vessels.values()).filter(
+      (v) => v.status === VesselStatus.WAITING_FOR_DEPARTURE
+    );
+  }
+
+  getDockedVessels(): Vessel[] {
+    return Array.from(this.vessels.values()).filter(
+      (v) => v.status === VesselStatus.DOCKED
     );
   }
 

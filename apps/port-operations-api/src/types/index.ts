@@ -29,7 +29,7 @@ export interface AssignmentEvent {
 }
 
 export interface StreamUpdate {
-  type: 'TUGBOAT_POSITION' | 'VESSEL_REQUEST' | 'ASSIGNMENT' | 'TUGBOAT_ARRIVED' | 'ASSISTANCE_COMPLETE' | 'SNAPSHOT';
+  type: 'TUGBOAT_POSITION' | 'VESSEL_REQUEST' | 'VESSEL_ARRIVED' | 'VESSEL_DOCKED' | 'VESSEL_DEPARTED' | 'ASSIGNMENT' | 'TUGBOAT_ARRIVED' | 'ASSISTANCE_COMPLETE' | 'PORT_STATUS' | 'SNAPSHOT';
   timestamp: Date;
   data: TugboatPosition | VesselPosition | AssignmentEvent | {
     tugboats: TugboatPosition[];

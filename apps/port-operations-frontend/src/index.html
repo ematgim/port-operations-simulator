@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Port Operations Monitor - Real-time Tracking</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <div class="header-content">
+                <h1>🚢 Port Operations Monitor</h1>
+                <div class="header-status">
+                    <span class="status-indicator" id="connection-status"></span>
+                    <span id="status-text">Connecting...</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-container">
+            <aside class="sidebar">
+                <div class="stats-panel">
+                    <h2>📊 Statistics</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="tugboat-count">0</div>
+                            <div class="stat-label">Tugboats</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="vessel-count">0</div>
+                            <div class="stat-label">Vessels</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="idle-count">0</div>
+                            <div class="stat-label">Idle</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="assisting-count">0</div>
+                            <div class="stat-label">Assisting</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="legend-panel">
+                    <h2>🎨 Legend</h2>
+                    <div class="legend-item">
+                        <div class="legend-icon tugboat idle"></div>
+                        <span>Tugboat - Idle</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-icon tugboat moving"></div>
+                        <span>Tugboat - Moving</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-icon tugboat assisting"></div>
+                        <span>Tugboat - Assisting</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-icon vessel requesting"></div>
+                        <span>Vessel - Requesting</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-icon vessel waiting"></div>
+                        <span>Vessel - Waiting</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-icon vessel being-assisted"></div>
+                        <span>Vessel - Being Assisted</span>
+                    </div>
+                </div>
+
+                <div class="entities-panel">
+                    <h2>🚤 Tugboats</h2>
+                    <div id="tugboat-list" class="entity-list"></div>
+
+                    <h2>⚓ Vessels</h2>
+                    <div id="vessel-list" class="entity-list"></div>
+                </div>
+            </aside>
+
+            <main class="map-section">
+                <div class="map-controls">
+                    <button id="zoom-in" class="control-btn">➕</button>
+                    <button id="zoom-out" class="control-btn">➖</button>
+                    <button id="reset-view" class="control-btn">🎯</button>
+                </div>
+                <canvas id="port-map"></canvas>
+                <div class="map-info">
+                    <span>Port Area: 1000 x 1000 units</span>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="app.js" type="module"></script>
+</body>
+</html>

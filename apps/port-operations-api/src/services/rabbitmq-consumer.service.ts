@@ -47,9 +47,15 @@ export class RabbitMQConsumer extends EventEmitter {
     // Emit different events based on message type
     if (content.type === 'TUGBOAT_POSITION') {
       this.emit('tugboat-position', content as TugboatPosition);
-    } else if (content.type === 'VESSEL_REQUEST') {
-      this.emit('vessel-request', content as VesselPosition);
-    } else if (content.eventType === 'ASSIGNMENT') {
+    } else if (content.type === 'VESSEL_REQUEST' || content.type === 'VESSEL_ARRIVED') {
+      this.emit('vessel-request', content);
+    } else if (content.type === 'VESSEL_DOCKED') {
+      this.emit('vessel-docked', content);
+    } else if (content.type === 'VESSEL_DEPARTED') {
+      this.emit('vessel-departed', content);
+    } else if (content.type === 'PORT_STATUS') {
+      this.emit('port-status', content);
+    } else if (content.type === 'ASSIGNMENT' || content.eventType === 'ASSIGNMENT') {
       this.emit('assignment', content as AssignmentEvent);
     } else if (content.eventType === 'TUGBOAT_ARRIVED') {
       this.emit('tugboat-arrived', content as AssignmentEvent);

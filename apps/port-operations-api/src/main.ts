@@ -6,11 +6,14 @@ import { StateManager } from './services/state-manager.service';
 import { StreamUpdate } from './types';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://localhost';
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:8080', 'http://localhost:5173'],
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -50,13 +53,48 @@ rabbitMQConsumer.on('vessel-request', (vessel: any) => {
     vesselName: vessel.vesselName,
     vesselType: vessel.vesselType,
     position: vessel.position,
-    status: 'REQUESTING_ASSISTANCE',
+    status: vessel.status || 'REQUESTING_ASSISTANCE',
   };
   stateManager.updateVessel(vesselData);
   broadcast({
     type: 'VESSEL_REQUEST',
     timestamp: new Date(),
     data: vesselData,
+  });
+});
+
+rabbitMQConsumer.on('vessel-docked', (event: any) => {
+  const vessel = stateManager.getVessel(event.vesselId);
+  if (vessel) {
+    vessel.status = 'DOCKED';
+    if (event.position) {
+      vessel.position = event.position;
+    }
+    stateManager.updateVessel(vessel);
+  }
+  
+  broadcast({
+    type: 'VESSEL_DOCKED',
+    timestamp: new Date(),
+    data: event,
+  });
+});
+
+rabbitMQConsumer.on('vessel-departed', (event: any) => {
+  stateManager.removeVessel(event.vesselId);
+  
+  broadcast({
+    type: 'VESSEL_DEPARTED',
+    timestamp: new Date(),
+    data: event,
+  });
+});
+
+rabbitMQConsumer.on('port-status', (status: any) => {
+  broadcast({
+    type: 'PORT_STATUS',
+    timestamp: new Date(),
+    data: status,
   });
 });
 
@@ -79,7 +117,7 @@ rabbitMQConsumer.on('assignment', (assignment: any) => {
 rabbitMQConsumer.on('tugboat-arrived', (event: any) => {
   const vessel = stateManager.getVessel(event.vesselId);
   if (vessel) {
-    vessel.status = 'BEING_ASSISTED';
+    vessel.status = 'BEING_TOWED_TO_DOCK';
     stateManager.updateVessel(vessel);
   }
   
@@ -170,11 +208,11 @@ async function startServer() {
     // Connect to RabbitMQ
     await rabbitMQConsumer.connect(RABBITMQ_URL);
 
-    // Start HTTP server
-    app.listen(PORT, () => {
-      console.log(`🚀 Port Operations API running on http://localhost:${PORT}`);
-      console.log(`📡 Stream endpoint: http://localhost:${PORT}/api/stream`);
-      console.log(`📊 State endpoint: http://localhost:${PORT}/api/state`);
+    // Start HTTP server on all interfaces
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Port Operations API running on http://0.0.0.0:${PORT}`);
+      console.log(`📡 Stream endpoint: http://0.0.0.0:${PORT}/api/stream`);
+      console.log(`📊 State endpoint: http://0.0.0.0:${PORT}/api/state`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);

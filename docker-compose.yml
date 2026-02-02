@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   rabbitmq:
     image: rabbitmq:3-management
@@ -50,6 +48,19 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+    networks:
+      - tug-tracker-network
+    restart: unless-stopped
+
+  port-operations-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: tug-tracker-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - port-operations-api
     networks:
       - tug-tracker-network
     restart: unless-stopped

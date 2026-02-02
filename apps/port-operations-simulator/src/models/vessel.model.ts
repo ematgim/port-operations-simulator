@@ -9,6 +9,9 @@ export interface Vessel {
   assignedTugboatId?: string;
   requestTime: Date;
   estimatedArrivalTime?: Date;
+  assignedDockId?: string;
+  dockedAt?: Date;
+  departureTime?: Date;
 }
 
 export enum VesselType {
@@ -19,10 +22,14 @@ export enum VesselType {
 }
 
 export enum VesselStatus {
-  REQUESTING_ASSISTANCE = 'REQUESTING_ASSISTANCE',
-  WAITING_FOR_TUGBOAT = 'WAITING_FOR_TUGBOAT',
-  BEING_ASSISTED = 'BEING_ASSISTED',
-  COMPLETED = 'COMPLETED',
+  ARRIVING = 'ARRIVING', // Llegando al punto de entrada
+  REQUESTING_ASSISTANCE = 'REQUESTING_ASSISTANCE', // Solicitando remolcador
+  WAITING_FOR_TUGBOAT = 'WAITING_FOR_TUGBOAT', // Esperando remolcador
+  BEING_TOWED_TO_DOCK = 'BEING_TOWED_TO_DOCK', // Siendo remolcado hacia el muelle
+  DOCKED = 'DOCKED', // Atracado en el muelle
+  WAITING_FOR_DEPARTURE = 'WAITING_FOR_DEPARTURE', // Esperando remolcador para salir
+  BEING_TOWED_TO_EXIT = 'BEING_TOWED_TO_EXIT', // Siendo remolcado hacia la salida
+  DEPARTED = 'DEPARTED', // Ha salido del puerto
 }
 
 export interface AssignmentEvent {
