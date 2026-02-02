@@ -11,7 +11,9 @@ export class RabbitMQConsumer extends EventEmitter {
     try {
       this.connection = await amqp.connect(url);
       this.channel = await this.connection.createChannel();
-      await this.channel.assertQueue(this.queueName, { durable: true });
+      // Set prefetch to 1 to ensure messages are processed one at a time
+      await this.channel.prefetch(1);
+      await this.channel.assertQueue(this.queueName, { durable: false });
       console.log(`✅ Connected to RabbitMQ at ${url}`);
       console.log(`✅ Listening to queue '${this.queueName}'`);
       

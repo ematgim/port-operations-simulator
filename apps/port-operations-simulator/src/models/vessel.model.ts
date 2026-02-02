@@ -38,6 +38,6 @@ export interface AssignmentEvent {
   tugboatId: string;
   tugboatName: string;
   timestamp: Date;
-  eventType: 'ASSIGNMENT' | 'TUGBOAT_ARRIVED' | 'ASSISTANCE_COMPLETE';
+  eventType: 'ASSIGNMENT' | 'TUGBOAT_ARRIVED' | 'ASSISTANCE_COMPLETE' | 'DOCKED';
   estimatedArrivalTime?: Date;
 }

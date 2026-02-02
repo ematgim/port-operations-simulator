@@ -9,7 +9,7 @@ export class RabbitMQService {
     try {
       this.connection = await amqp.connect(url);
       this.channel = await this.connection.createChannel();
-      await this.channel.assertQueue(this.queueName, { durable: true });
+      await this.channel.assertQueue(this.queueName, { durable: false });
       console.log(`✅ Connected to RabbitMQ at ${url}`);
       console.log(`✅ Queue '${this.queueName}' is ready`);
     } catch (error) {
@@ -26,9 +26,8 @@ export class RabbitMQService {
     try {
       const messageBuffer = Buffer.from(JSON.stringify(message));
       this.channel.sendToQueue(this.queueName, messageBuffer, {
-        persistent: true,
+        persistent: false,
       });
-      console.log('📤 Published movement:', message);
     } catch (error) {
       console.error('❌ Failed to publish movement:', error);
       throw error;

@@ -3,6 +3,14 @@ const API_URL = 'http://localhost:3000';
 
 const PORT_SIZE = 1000;
 const GRID_SIZE = 100;
+const DOCKS = [
+    { id: 'DOCK_01', name: 'Muelle A1', position: { x: 200, y: 300 } },
+    { id: 'DOCK_02', name: 'Muelle A2', position: { x: 400, y: 350 } },
+    { id: 'DOCK_03', name: 'Muelle B1', position: { x: 600, y: 300 } },
+    { id: 'DOCK_04', name: 'Muelle B2', position: { x: 800, y: 350 } },
+    { id: 'DOCK_05', name: 'Muelle C1', position: { x: 300, y: 600 } },
+    { id: 'DOCK_06', name: 'Muelle C2', position: { x: 700, y: 600 } },
+];
 
 // State
 let tugboats = new Map();
@@ -284,6 +292,9 @@ function render() {
     
     // Draw grid
     drawGrid();
+
+    // Draw docks
+    drawDocks();
     
     // Draw connection lines
     drawConnections();
@@ -330,6 +341,30 @@ function drawGrid() {
     ctx.strokeStyle = 'rgba(0, 212, 255, 0.3)';
     ctx.lineWidth = 2;
     ctx.strokeRect(toCanvasX(0), toCanvasY(0), PORT_SIZE * scale, PORT_SIZE * scale);
+}
+
+function drawDocks() {
+    DOCKS.forEach(dock => drawDock(dock));
+}
+
+function drawDock(dock) {
+    const x = toCanvasX(dock.position.x);
+    const y = toCanvasY(dock.position.y);
+    const size = Math.max(14, 14 * scale);
+
+    ctx.fillStyle = 'rgba(0, 255, 170, 0.15)';
+    ctx.strokeStyle = 'rgba(0, 255, 170, 0.8)';
+    ctx.lineWidth = 2;
+
+    ctx.beginPath();
+    ctx.rect(x - size, y - size, size * 2, size * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#b6ffe7';
+    ctx.font = `${Math.max(10, 10 * scale)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(dock.name, x, y - size - 6);
 }
 
 function drawConnections() {
