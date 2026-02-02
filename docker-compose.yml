@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: tug-tracker-rabbitmq
+    ports:
+      - "5672:5672"    # AMQP port
+      - "15672:15672"  # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - tug-tracker-network
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  port-operations-simulator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tug-tracker-simulator
+    environment:
+      RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672
+      SIMULATION_INTERVAL: 100
+      VESSEL_SPAWN_INTERVAL: 8000
+      ASSISTANCE_DURATION: 5000
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - tug-tracker-network
+    restart: unless-stopped
+
+  port-operations-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: tug-tracker-api
+    ports:
+      - "3000:3000"
+    environment:
+      RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672
+      PORT: 3000
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - tug-tracker-network
+    restart: unless-stopped
+
+volumes:
+  rabbitmq_data:
+
+networks:
+  tug-tracker-network:
+    driver: bridge

@@ -1,10 +1,122 @@
-# TugTracker
+# Port Operations Simulator
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+Sistema de simulación de operaciones portuarias que simula el movimiento de remolcadores en un puerto, publicando eventos a RabbitMQ.
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
+## 🏗️ Estructura del Proyecto
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/getting-started/intro#learn-nx?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+Este es un monorepo gestionado con Nx que contiene:
+
+- **port-operations-simulator**: Aplicación backend en Node.js con TypeScript que simula movimientos de remolcadores
+
+## 🚀 Características
+
+- ✅ Simulación de múltiples remolcadores con diferentes características
+- ✅ Publicación de eventos de movimiento a RabbitMQ
+- ✅ Gestión de estados de remolcadores (IDLE, MOVING, DOCKED, ASSISTING)
+- ✅ Simulación de posiciones en un área portuaria
+- ✅ Configuración mediante variables de entorno
+
+## 📋 Requisitos Previos
+
+- Node.js (versión 18 o superior)
+- npm
+- RabbitMQ (corriendo localmente o accesible remotamente)
+
+## 🔧 Instalación
+
+```bash
+# Instalar dependencias
+npm install
+```
+
+## 🎮 Uso
+
+### Iniciar RabbitMQ
+
+Si usas Docker:
+
+```bash
+docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management
+```
+
+### Ejecutar la Aplicación
+
+```bash
+# Ejecutar en modo desarrollo
+npx nx serve port-operations-simulator
+
+# O compilar y ejecutar
+npx nx build port-operations-simulator
+node dist/apps/port-operations-simulator/main.js
+```
+
+### Variables de Entorno
+
+Puedes configurar las siguientes variables de entorno:
+
+- `RABBITMQ_URL`: URL de conexión a RabbitMQ (por defecto: `amqp://localhost`)
+- `SIMULATION_INTERVAL`: Intervalo de simulación en milisegundos (por defecto: `5000`)
+
+Ejemplo:
+
+```bash
+RABBITMQ_URL=amqp://user:pass@localhost:5672 SIMULATION_INTERVAL=3000 npx nx serve port-operations-simulator
+```
+
+## 🚢 Remolcadores Simulados
+
+El simulador inicializa 4 remolcadores con las siguientes características:
+
+1. **Hercules** - Capacidad: 50, Velocidad: 15
+2. **Neptune** - Capacidad: 60, Velocidad: 12
+3. **Atlas** - Capacidad: 55, Velocidad: 14
+4. **Titan** - Capacidad: 45, Velocidad: 16
+
+## 📊 Formato de Eventos
+
+Los eventos publicados a RabbitMQ tienen el siguiente formato:
+
+```json
+{
+  "tugboatId": "1",
+  "timestamp": "2026-02-02T10:30:00.000Z",
+  "fromPosition": {
+    "x": 100,
+    "y": 200
+  },
+  "toPosition": {
+    "x": 300,
+    "y": 400
+  },
+  "status": "MOVING"
+}
+```
+
+## 🏗️ Arquitectura
+
+```
+apps/port-operations-simulator/
+├── src/
+│   ├── main.ts                          # Punto de entrada
+│   ├── models/
+│   │   └── tugboat.model.ts             # Modelos de datos
+│   └── services/
+│       ├── rabbitmq.service.ts          # Servicio RabbitMQ
+│       └── tugboat.simulator.ts         # Simulador de remolcadores
+```
+
+## 🛠️ Comandos Útiles
+
+```bash
+# Ejecutar en modo desarrollo
+npx nx serve port-operations-simulator
+
+# Compilar la aplicación
+npx nx build port-operations-simulator
+
+# Linter
+npx nx lint port-operations-simulator
+```
 
 ## Run tasks
 

@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Port Operations Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            overflow: hidden;
+        }
+        
+        #container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        #sidebar {
+            width: 350px;
+            background: #16213e;
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 2px solid #0f3460;
+        }
+        
+        #map-container {
+            flex: 1;
+            position: relative;
+            background: #0f1419;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        
+        h1 {
+            color: #e94560;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        
+        h2 {
+            color: #00d4ff;
+            margin: 20px 0 10px 0;
+            font-size: 18px;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+        
+        .status.connected {
+            background: #00ff88;
+            color: #000;
+        }
+        
+        .status.disconnected {
+            background: #ff0055;
+            color: #fff;
+        }
+        
+        .entity {
+            background: #1a1a2e;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+            border-left: 4px solid #e94560;
+        }
+        
+        .tugboat {
+            border-left-color: #00d4ff;
+        }
+        
+        .vessel {
+            border-left-color: #e94560;
+        }
+        
+        .entity-name {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+        
+        .entity-info {
+            font-size: 12px;
+            color: #aaa;
+            line-height: 1.6;
+        }
+        
+        .icon {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            transition: all 0.1s ease;
+        }
+        
+        .tugboat-icon {
+            width: 24px;
+            height: 24px;
+            background: #00d4ff;
+            border-radius: 50%;
+            border: 3px solid #0099cc;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+        
+        .tugboat-icon.MOVING {
+            animation: pulse 2s infinite;
+        }
+        
+        .tugboat-icon.ASSISTING {
+            background: #ffaa00;
+            border-color: #cc8800;
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
+        }
+        
+        .vessel-icon {
+            width: 32px;
+            height: 32px;
+            background: #e94560;
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+            box-shadow: 0 0 10px rgba(233, 69, 96, 0.5);
+        }
+        
+        .vessel-icon.WAITING_FOR_TUGBOAT {
+            animation: blink 1s infinite;
+        }
+        
+        .vessel-icon.BEING_ASSISTED {
+            background: #ffaa00;
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
+        }
+        
+        .label {
+            position: absolute;
+            font-size: 11px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 2px 6px;
+            border-radius: 3px;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        .connection-line {
+            position: absolute;
+            height: 2px;
+            background: rgba(0, 212, 255, 0.3);
+            transform-origin: left center;
+            pointer-events: none;
+        }
+        
+        #stats {
+            margin-top: 20px;
+            padding: 12px;
+            background: #0f3460;
+            border-radius: 8px;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 6px 0;
+            font-size: 13px;
+        }
+        
+        .stat-value {
+            color: #00ff88;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="sidebar">
+            <h1>🚢 Port Operations</h1>
+            <div>
+                Status: <span class="status disconnected" id="connection-status">Disconnected</span>
+            </div>
+            
+            <div id="stats">
+                <div class="stat-item">
+                    <span>Remolcadores:</span>
+                    <span class="stat-value" id="tugboat-count">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Buques:</span>
+                    <span class="stat-value" id="vessel-count">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>En asistencia:</span>
+                    <span class="stat-value" id="assisting-count">0</span>
+                </div>
+            </div>
+            
+            <h2>🚤 Remolcadores</h2>
+            <div id="tugboat-list"></div>
+            
+            <h2>⚓ Buques</h2>
+            <div id="vessel-list"></div>
+        </div>
+        
+        <div id="map-container">
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000';
+        let eventSource = null;
+        const tugboats = new Map();
+        const vessels = new Map();
+
+        function connectToStream() {
+            eventSource = new EventSource(`${API_URL}/api/stream`);
+            
+            eventSource.onopen = () => {
+                console.log('Connected to stream');
+                document.getElementById('connection-status').textContent = 'Connected';
+                document.getElementById('connection-status').className = 'status connected';
+            };
+            
+            eventSource.onerror = () => {
+                console.error('Stream connection error');
+                document.getElementById('connection-status').textContent = 'Disconnected';
+                document.getElementById('connection-status').className = 'status disconnected';
+            };
+            
+            eventSource.onmessage = (event) => {
+                const update = JSON.parse(event.data);
+                handleUpdate(update);
+            };
+        }
+
+        function handleUpdate(update) {
+            switch(update.type) {
+                case 'SNAPSHOT':
+                    update.data.tugboats.forEach(t => updateTugboat(t));
+                    update.data.vessels.forEach(v => updateVessel(v));
+                    break;
+                case 'TUGBOAT_POSITION':
+                    updateTugboat(update.data);
+                    break;
+                case 'VESSEL_REQUEST':
+                    updateVessel(update.data);
+                    break;
+                case 'ASSIGNMENT':
+                case 'TUGBOAT_ARRIVED':
+                case 'ASSISTANCE_COMPLETE':
+                    // Handled by state updates from TUGBOAT_POSITION
+                    break;
+            }
+            updateUI();
+        }
+
+        function updateTugboat(data) {
+            tugboats.set(data.tugboatId, data);
+        }
+
+        function updateVessel(data) {
+            if (data.status === 'COMPLETED') {
+                vessels.delete(data.vesselId);
+                removeVesselFromMap(data.vesselId);
+            } else {
+                vessels.set(data.vesselId, data);
+            }
+        }
+
+        function updateUI() {
+            updateStats();
+            updateTugboatList();
+            updateVesselList();
+            updateMap();
+        }
+
+        function updateStats() {
+            document.getElementById('tugboat-count').textContent = tugboats.size;
+            document.getElementById('vessel-count').textContent = vessels.size;
+            
+            let assistingCount = 0;
+            tugboats.forEach(t => {
+                if (t.status === 'ASSISTING') assistingCount++;
+            });
+            document.getElementById('assisting-count').textContent = assistingCount;
+        }
+
+        function updateTugboatList() {
+            const container = document.getElementById('tugboat-list');
+            container.innerHTML = '';
+            
+            tugboats.forEach(tugboat => {
+                const div = document.createElement('div');
+                div.className = 'entity tugboat';
+                div.innerHTML = `
+                    <div class="entity-name">${tugboat.tugboatName}</div>
+                    <div class="entity-info">
+                        Estado: ${tugboat.status}<br>
+                        Posición: (${Math.round(tugboat.position.x)}, ${Math.round(tugboat.position.y)})<br>
+                        Velocidad: ${tugboat.speed} u/s
+                        ${tugboat.assignedVesselId ? `<br>Asignado a: ${tugboat.assignedVesselId}` : ''}
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function updateVesselList() {
+            const container = document.getElementById('vessel-list');
+            container.innerHTML = '';
+            
+            vessels.forEach(vessel => {
+                const div = document.createElement('div');
+                div.className = 'entity vessel';
+                div.innerHTML = `
+                    <div class="entity-name">${vessel.vesselName}</div>
+                    <div class="entity-info">
+                        Tipo: ${vessel.vesselType}<br>
+                        Estado: ${vessel.status}<br>
+                        Posición: (${Math.round(vessel.position.x)}, ${Math.round(vessel.position.y)})
+                        ${vessel.assignedTugboatId ? `<br>Remolcador: ${vessel.assignedTugboatId}` : ''}
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function updateMap() {
+            const map = document.getElementById('map');
+            const mapWidth = map.offsetWidth;
+            const mapHeight = map.offsetHeight;
+            
+            // Clear existing icons
+            map.querySelectorAll('.icon, .label, .connection-line').forEach(el => el.remove());
+            
+            // Draw tugboats
+            tugboats.forEach(tugboat => {
+                const x = (tugboat.position.x / 1000) * mapWidth;
+                const y = (tugboat.position.y / 1000) * mapHeight;
+                
+                const icon = document.createElement('div');
+                icon.className = `icon tugboat-icon ${tugboat.status}`;
+                icon.style.left = `${x}px`;
+                icon.style.top = `${y}px`;
+                icon.title = tugboat.tugboatName;
+                
+                const label = document.createElement('div');
+                label.className = 'label';
+                label.textContent = tugboat.tugboatName;
+                label.style.left = `${x}px`;
+                label.style.top = `${y - 20}px`;
+                label.style.transform = 'translateX(-50%)';
+                
+                map.appendChild(icon);
+                map.appendChild(label);
+                
+                // Draw connection line if assigned
+                if (tugboat.assignedVesselId) {
+                    const vessel = vessels.get(tugboat.assignedVesselId);
+                    if (vessel) {
+                        const vx = (vessel.position.x / 1000) * mapWidth;
+                        const vy = (vessel.position.y / 1000) * mapHeight;
+                        
+                        const dx = vx - x;
+                        const dy = vy - y;
+                        const length = Math.sqrt(dx * dx + dy * dy);
+                        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                        
+                        const line = document.createElement('div');
+                        line.className = 'connection-line';
+                        line.style.left = `${x}px`;
+                        line.style.top = `${y}px`;
+                        line.style.width = `${length}px`;
+                        line.style.transform = `rotate(${angle}deg)`;
+                        
+                        map.appendChild(line);
+                    }
+                }
+            });
+            
+            // Draw vessels
+            vessels.forEach(vessel => {
+                const x = (vessel.position.x / 1000) * mapWidth;
+                const y = (vessel.position.y / 1000) * mapHeight;
+                
+                const icon = document.createElement('div');
+                icon.className = `icon vessel-icon ${vessel.status}`;
+                icon.style.left = `${x}px`;
+                icon.style.top = `${y}px`;
+                icon.title = vessel.vesselName;
+                
+                const label = document.createElement('div');
+                label.className = 'label';
+                label.textContent = vessel.vesselName;
+                label.style.left = `${x}px`;
+                label.style.top = `${y + 20}px`;
+                label.style.transform = 'translateX(-50%)';
+                
+                map.appendChild(icon);
+                map.appendChild(label);
+            });
+        }
+
+        function removeVesselFromMap(vesselId) {
+            vessels.delete(vesselId);
+        }
+
+        // Initialize
+        connectToStream();
+        setInterval(updateMap, 50); // Smooth animation
+    </script>
+</body>
+</html>

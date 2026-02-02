@@ -1,0 +1,27 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copiar archivos de dependencias
+COPY package*.json ./
+COPY tsconfig.base.json ./
+COPY nx.json ./
+
+# Instalar dependencias
+RUN npm ci
+
+# Copiar el código fuente
+COPY apps/port-operations-api ./apps/port-operations-api
+
+# Compilar la aplicación
+RUN npx nx build port-operations-api --configuration=production
+
+# Exponer puerto
+EXPOSE 3000
+
+# Variables de entorno por defecto
+ENV RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672
+ENV PORT=3000
+
+# Comando para ejecutar la aplicación
+CMD ["node", "dist/apps/port-operations-api/main.js"]
