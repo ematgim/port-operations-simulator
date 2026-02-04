@@ -32,8 +32,7 @@ services:
       DOCK_DURATION: 60000
       POSITION_PUBLISH_INTERVAL: 1000
     depends_on:
-      rabbitmq:
-        condition: service_healthy
+      - rabbitmq
     networks:
       - tug-tracker-network
     restart: unless-stopped
