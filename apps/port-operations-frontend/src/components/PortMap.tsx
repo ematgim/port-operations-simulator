@@ -12,6 +12,7 @@ interface PortMapProps {
 
 const PORT_SIZE = 1000;
 const GRID_SIZE = 100;
+const CLICK_THRESHOLD_RADIUS = 15;
 
 const DOCKS: Dock[] = [
   { id: 'DOCK_01', name: 'Muelle A1', position: { x: 200, y: 300 } },
@@ -281,8 +282,7 @@ export const PortMap: React.FC<PortMapProps> = ({ tugboats, vessels }) => {
       const distance = Math.sqrt(
         Math.pow(tugboat.position.x - worldX, 2) + Math.pow(tugboat.position.y - worldY, 2)
       );
-      if (distance <= 15) {
-        // Click threshold
+      if (distance <= CLICK_THRESHOLD_RADIUS) {
         setSelectedEntity(tugboat);
         setSelectedEntityType('tugboat');
         setDialogOpen(true);
@@ -295,8 +295,7 @@ export const PortMap: React.FC<PortMapProps> = ({ tugboats, vessels }) => {
       const distance = Math.sqrt(
         Math.pow(vessel.position.x - worldX, 2) + Math.pow(vessel.position.y - worldY, 2)
       );
-      if (distance <= 15) {
-        // Click threshold
+      if (distance <= CLICK_THRESHOLD_RADIUS) {
         setSelectedEntity(vessel);
         setSelectedEntityType('vessel');
         setDialogOpen(true);
