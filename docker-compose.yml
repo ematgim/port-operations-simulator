@@ -26,10 +26,11 @@ services:
     container_name: tug-tracker-simulator
     environment:
       RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672
-      SIMULATION_INTERVAL: 1000
-      VESSEL_SPAWN_INTERVAL: 20000
-      POSITION_UPDATE_INTERVAL: 1000
-      ASSISTANCE_DURATION: 5000
+      PUBLISH_EVENTS: "true"
+      SIMULATION_INTERVAL: 100
+      VESSEL_SPAWN_INTERVAL: 30000
+      DOCK_DURATION: 60000
+      POSITION_PUBLISH_INTERVAL: 1000
     depends_on:
       rabbitmq:
         condition: service_healthy
