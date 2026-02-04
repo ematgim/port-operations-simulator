@@ -16,7 +16,7 @@ const VESSEL_SPAWN_INTERVAL = parseInt(
   10
 );
 const DOCK_DURATION = parseInt(
-  process.env.DOCK_DURATION || '20000',
+  process.env.DOCK_DURATION || '60000',
   10
 );
 
@@ -47,8 +47,11 @@ async function main() {
 
     // Spawn vessels periodically at entry point
     const vesselSpawnInterval = setInterval(() => {
-      // Limit to max 1 vessel for testing
-      if (vesselService.getAllVessels().length >= 1) {
+      // Limit: maximum docks + 2 vessels in port
+      const maxVesselsInPort = portService.getAllDocks().length + 2;
+      const vesselsInPort = vesselService.getVesselsInPort().length;
+      
+      if (vesselsInPort >= maxVesselsInPort) {
         return;
       }
       
@@ -74,6 +77,42 @@ async function main() {
       // Get all tugboats and vessels
       const tugboats = tugboatSimulator.getTugboats();
       const vessels = vesselService.getAllVessels();
+
+      // PRIORITY 1: Handle vessels ready to depart (SALIDA tiene prioridad)
+      const vesselsReadyToDepart = vessels.filter(
+        (v) =>
+          v.status === VesselStatus.DOCKED &&
+          v.dockedAt &&
+          Date.now() - v.dockedAt.getTime() >= DOCK_DURATION &&
+          !v.assignedTugboatId
+      );
+
+      // Assign tugboats to departing vessels first
+      for (const vessel of vesselsReadyToDepart) {
+        const availableTugboat = tugboats.find((t) => t.status === TugboatStatus.IDLE);
+
+        if (availableTugboat) {
+          // Assign tugboat to tow vessel to exit
+          vessel.assignedTugboatId = availableTugboat.id;
+          availableTugboat.status = TugboatStatus.MOVING;
+
+          tugboatSimulator.assignTugboatToVessel(availableTugboat.id, vessel.id);
+
+          const exitPoint = portService.getExitPoint();
+          console.log(
+            `\n🎯 PRIORITY DEPARTURE: ${availableTugboat.name} assigned to tow ${vessel.name}`
+          );
+          console.log(
+            `   Destination: ${exitPoint.name} at (${exitPoint.position.x}, ${exitPoint.position.y})`
+          );
+          console.log(
+            `   Tugboat at (${Math.round(availableTugboat.position.x)}, ${Math.round(availableTugboat.position.y)})`
+          );
+          console.log(
+            `   Vessel at (${Math.round(vessel.position.x)}, ${Math.round(vessel.position.y)})`
+          );
+        }
+      }
 
       // Process each vessel based on its status
       for (const vessel of vessels) {
@@ -204,47 +243,14 @@ async function main() {
                 if (vessel.status === VesselStatus.DOCKED) {
                   console.log(`\n🕒 READY TO DEPART: ${vessel.name} ready to leave ${dock.name}`);
                   console.log(`   Waiting for tugboat assignment...`);
-                  // Vessel will be picked up in next simulation cycle
+                  // Vessel will be picked up in next simulation cycle (priority queue)
                 }
               }, DOCK_DURATION);
             }
           }
         }
         
-        // CASE 4: Vessel ready to depart (been docked for DOCK_DURATION)
-        if (vessel.status === VesselStatus.DOCKED && 
-            vessel.dockedAt && 
-            Date.now() - vessel.dockedAt.getTime() >= DOCK_DURATION &&
-            !vessel.assignedTugboatId) {
-          
-          const availableTugboat = tugboats.find(t => t.status === TugboatStatus.IDLE);
-          
-          if (availableTugboat) {
-            // Assign tugboat to tow vessel to exit
-            vessel.assignedTugboatId = availableTugboat.id;
-            availableTugboat.status = TugboatStatus.MOVING;
-            
-            tugboatSimulator.assignTugboatToVessel(availableTugboat.id, vessel.id);
-            
-            const exitPoint = portService.getExitPoint();
-            console.log(`\n🎯 ASSIGNMENT TO EXIT: ${availableTugboat.name} assigned to tow ${vessel.name}`);
-            console.log(`   Destination: ${exitPoint.name} at (${exitPoint.position.x}, ${exitPoint.position.y})`);
-            console.log(`   Tugboat at (${Math.round(availableTugboat.position.x)}, ${Math.round(availableTugboat.position.y)})`);
-            console.log(`   Vessel at (${Math.round(vessel.position.x)}, ${Math.round(vessel.position.y)})`);
-            
-            // await rabbitMQ.publishMovement({
-            //   type: 'ASSIGNMENT',
-            //   vesselId: vessel.id,
-            //   vesselName: vessel.name,
-            //   tugboatId: availableTugboat.id,
-            //   tugboatName: availableTugboat.name,
-            //   timestamp: new Date(),
-            //   eventType: 'ASSIGNMENT',
-            //   destinationType: 'EXIT',
-            //   destination: exitPoint.name,
-            // });
-          }
-        }
+        // NOTE: CASE 4 removed - departure assignment now handled by priority queue at the beginning
         
         // CASE 5: Tugboat moving to docked vessel for departure
         if (vessel.status === VesselStatus.DOCKED && vessel.assignedTugboatId) {

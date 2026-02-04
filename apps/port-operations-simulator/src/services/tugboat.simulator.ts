@@ -29,6 +29,10 @@ export class TugboatSimulator {
   private initializeTugboats(): void {
     const tugboatData = [
       { id: '1', name: 'Hercules', capacity: 50, speed: 10 },
+      { id: '2', name: 'Titan', capacity: 45, speed: 12 },
+      { id: '3', name: 'Atlas', capacity: 55, speed: 9 },
+      { id: '4', name: 'Neptune', capacity: 50, speed: 11 },
+      { id: '5', name: 'Poseidon', capacity: 48, speed: 10 },
     ];
 
     tugboatData.forEach((data) => {

@@ -85,6 +85,13 @@ export class VesselService {
     return Array.from(this.vessels.values());
   }
 
+  getVesselsInPort(): Vessel[] {
+    // Obtener buques que están en el puerto (no incluye los que han partido)
+    return Array.from(this.vessels.values()).filter(
+      (vessel) => vessel.status !== VesselStatus.DEPARTED
+    );
+  }
+
   removeVessel(id: string): void {
     const vessel = this.vessels.get(id);
     if (vessel) {
