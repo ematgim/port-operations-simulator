@@ -1,57 +1,50 @@
 import { Vessel, VesselType, VesselStatus } from '../models/vessel.model';
 import { Position } from '../models/tugboat.model';
 import { PortService } from './port.service';
+import { VESSELS_CATALOG, VesselCatalogEntry } from '../data/vessels-catalog';
 
 export class VesselService {
   private vessels: Map<string, Vessel> = new Map();
   private vesselIdCounter = 1;
   private portService: PortService;
-
-  private vesselNames = [
-    'MSC Maria',
-    'Ever Forward',
-    'Maersk Viking',
-    'CMA CGM Titan',
-    'Pacific Star',
-    'Atlantic Queen',
-    'Ocean Explorer',
-    'Sea Pioneer',
-    'Mediterranean Dream',
-    'Baltic Trader',
-  ];
-
-  private usedNames: Set<string> = new Set();
+  private vesselsCatalog: VesselCatalogEntry[];
+  private catalogIndex = 0;
 
   constructor(portService: PortService) {
     this.portService = portService;
+    this.vesselsCatalog = this.shuffleArray([...VESSELS_CATALOG]);
+    console.log(`✅ Loaded ${this.vesselsCatalog.length} vessels from catalog`);
+  }
+
+  private shuffleArray<T>(array: T[]): T[] {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
   }
 
   generateVessel(): Vessel {
-    const availableNames = this.vesselNames.filter(
-      (name) => !this.usedNames.has(name)
-    );
+    // Get next vessel from catalog
+    const catalogEntry = this.vesselsCatalog[this.catalogIndex];
+    this.catalogIndex = (this.catalogIndex + 1) % this.vesselsCatalog.length;
 
-    let name: string;
-    if (availableNames.length > 0) {
-      name = availableNames[Math.floor(Math.random() * availableNames.length)];
-      this.usedNames.add(name);
-    } else {
-      name = `Vessel-${this.vesselIdCounter}`;
+    // If we've cycled through all vessels, reshuffle
+    if (this.catalogIndex === 0) {
+      this.vesselsCatalog = this.shuffleArray([...this.vesselsCatalog]);
     }
 
     const vessel: Vessel = {
       id: `V${this.vesselIdCounter++}`,
-      name,
-      type: this.randomVesselType(),
+      name: catalogEntry.name,
+      type: catalogEntry.type as VesselType,
       position: this.getEntryPointPosition(),
       status: VesselStatus.AT_ENTRY,
       requestTime: new Date(),
     };
 
     this.vessels.set(vessel.id, vessel);
-    // console.log(
-    //   `🚢 New vessel at entry point: ${vessel.name} (${vessel.type})`
-    // );
 
     return vessel;
   }
@@ -63,11 +56,6 @@ export class VesselService {
       x: entryPoint.position.x + (Math.random() - 0.5) * 20,
       y: entryPoint.position.y + (Math.random() - 0.5) * 20,
     };
-  }
-
-  private randomVesselType(): VesselType {
-    const types = Object.values(VesselType);
-    return types[Math.floor(Math.random() * types.length)];
   }
 
   getVessel(id: string): Vessel | undefined {
@@ -95,7 +83,6 @@ export class VesselService {
   removeVessel(id: string): void {
     const vessel = this.vessels.get(id);
     if (vessel) {
-      this.usedNames.delete(vessel.name);
       this.vessels.delete(id);
     }
   }

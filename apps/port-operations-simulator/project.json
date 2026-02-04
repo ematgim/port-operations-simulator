@@ -15,7 +15,10 @@
         "bundle": false,
         "main": "apps/port-operations-simulator/src/main.ts",
         "tsConfig": "apps/port-operations-simulator/tsconfig.app.json",
-        "assets": ["apps/port-operations-simulator/src/assets"],
+        "assets": [
+          "apps/port-operations-simulator/src/assets",
+          "apps/port-operations-simulator/src/data"
+        ],
         "generatePackageJson": true,
         "esbuildOptions": {
           "sourcemap": true,
