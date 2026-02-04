@@ -2,7 +2,7 @@
 // Use relative URL to connect to API on the same host as the frontend
 const API_URL = window.location.hostname === 'localhost' 
     ? 'http://localhost:3000' 
-    : `http://${window.location.hostname}:3000`;
+    : `${window.location.hostname}`;
 
 const PORT_SIZE = 1000;
 const GRID_SIZE = 100;
