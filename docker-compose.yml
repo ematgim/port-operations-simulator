@@ -22,7 +22,7 @@ services:
   port-operations-simulator:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.simulator
     container_name: tug-tracker-simulator
     environment:
       RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672
