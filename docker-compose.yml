@@ -49,8 +49,7 @@ services:
       RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672
       PORT: 3000
     depends_on:
-      rabbitmq:
-        condition: service_healthy
+      - rabbitmq
     networks:
       - tug-tracker-network
     restart: unless-stopped
