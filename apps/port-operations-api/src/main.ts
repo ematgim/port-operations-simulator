@@ -18,7 +18,6 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
 
 // State management
 const stateManager = new StateManager();
@@ -228,6 +227,9 @@ app.get('/api/stream', (req: Request, res: Response) => {
     console.log(`📡 Client disconnected. Total clients: ${clients.size}`);
   });
 });
+
+// Serve static files (after API routes so they don't interfere)
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Start server
 async function startServer() {
