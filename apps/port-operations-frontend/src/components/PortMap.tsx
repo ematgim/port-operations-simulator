@@ -1,5 +1,9 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { PlusIcon, MinusIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { Tugboat, Vessel, Dock } from '../types';
+import { EntityDetailsDialog } from './EntityDetailsDialog';
+import { IconButton } from './ui/IconButton';
+import { Tooltip, TooltipProvider } from './ui/Tooltip';
 
 interface PortMapProps {
   tugboats: Map<string, Tugboat>;
@@ -26,9 +30,15 @@ export const PortMap: React.FC<PortMapProps> = ({ tugboats, vessels }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [lastMouseX, setLastMouseX] = useState(0);
   const [lastMouseY, setLastMouseY] = useState(0);
+  const [selectedEntity, setSelectedEntity] = useState<Tugboat | Vessel | null>(null);
+  const [selectedEntityType, setSelectedEntityType] = useState<'tugboat' | 'vessel' | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const toCanvasX = useCallback((x: number) => offsetX + x * scale, [offsetX, scale]);
   const toCanvasY = useCallback((y: number) => offsetY + y * scale, [offsetY, scale]);
+
+  const toWorldX = useCallback((canvasX: number) => (canvasX - offsetX) / scale, [offsetX, scale]);
+  const toWorldY = useCallback((canvasY: number) => (canvasY - offsetY) / scale, [offsetY, scale]);
 
   const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -253,6 +263,48 @@ export const PortMap: React.FC<PortMapProps> = ({ tugboats, vessels }) => {
     setIsDragging(false);
   };
 
+  const handleCanvasClick = (e: React.MouseEvent) => {
+    if (isDragging) return; // Don't open dialog if we were dragging
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+
+    const worldX = toWorldX(clickX);
+    const worldY = toWorldY(clickY);
+
+    // Check tugboats first (they're drawn on top)
+    for (const tugboat of tugboats.values()) {
+      const distance = Math.sqrt(
+        Math.pow(tugboat.position.x - worldX, 2) + Math.pow(tugboat.position.y - worldY, 2)
+      );
+      if (distance <= 15) {
+        // Click threshold
+        setSelectedEntity(tugboat);
+        setSelectedEntityType('tugboat');
+        setDialogOpen(true);
+        return;
+      }
+    }
+
+    // Check vessels
+    for (const vessel of vessels.values()) {
+      const distance = Math.sqrt(
+        Math.pow(vessel.position.x - worldX, 2) + Math.pow(vessel.position.y - worldY, 2)
+      );
+      if (distance <= 15) {
+        // Click threshold
+        setSelectedEntity(vessel);
+        setSelectedEntityType('vessel');
+        setDialogOpen(true);
+        return;
+      }
+    }
+  };
+
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
@@ -273,31 +325,57 @@ export const PortMap: React.FC<PortMapProps> = ({ tugboats, vessels }) => {
   const handleResetView = () => resizeCanvas();
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <div className="map-controls">
-        <button id="zoom-in" className="control-btn" onClick={handleZoomIn}>
-          ➕
-        </button>
-        <button id="zoom-out" className="control-btn" onClick={handleZoomOut}>
-          ➖
-        </button>
-        <button id="reset-view" className="control-btn" onClick={handleResetView}>
-          🎯
-        </button>
+    <TooltipProvider>
+      <div className="relative w-full h-full">
+        {/* Responsive Controls Bar - Bottom on mobile, Top-right on tablet+ */}
+        <div className="fixed bottom-0 left-0 right-0 flex flex-row gap-2 justify-center py-2 px-4 bg-bg-secondary/95 backdrop-blur border-t border-border-color z-10 md:absolute md:top-4 md:right-4 md:bottom-auto md:left-auto md:flex-col md:bg-transparent md:border-0 md:backdrop-blur-none">
+          <Tooltip content="Zoom In">
+            <IconButton
+              icon={<PlusIcon className="w-5 h-5" />}
+              onClick={handleZoomIn}
+              label="Zoom In"
+            />
+          </Tooltip>
+          <Tooltip content="Zoom Out">
+            <IconButton
+              icon={<MinusIcon className="w-5 h-5" />}
+              onClick={handleZoomOut}
+              label="Zoom Out"
+            />
+          </Tooltip>
+          <Tooltip content="Reset View">
+            <IconButton
+              icon={<ArrowPathIcon className="w-5 h-5" />}
+              onClick={handleResetView}
+              label="Reset View"
+            />
+          </Tooltip>
+        </div>
+
+        <canvas
+          ref={canvasRef}
+          id="port-map"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onClick={handleCanvasClick}
+          onWheel={handleWheel}
+          className="w-full h-full cursor-move"
+          style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+        />
+
+        <div className="absolute bottom-4 left-4 bg-bg-secondary/90 backdrop-blur px-4 py-2 rounded-lg text-sm text-text-secondary border border-border-color">
+          <span>Port Area: 1000 x 1000 units</span>
+        </div>
+
+        <EntityDetailsDialog
+          open={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+          entity={selectedEntity}
+          entityType={selectedEntityType}
+        />
       </div>
-      <canvas
-        ref={canvasRef}
-        id="port-map"
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onWheel={handleWheel}
-        style={{ width: '100%', height: '100%', cursor: isDragging ? 'grabbing' : 'move' }}
-      />
-      <div className="map-info">
-        <span>Port Area: 1000 x 1000 units</span>
-      </div>
-    </div>
+    </TooltipProvider>
   );
 };
