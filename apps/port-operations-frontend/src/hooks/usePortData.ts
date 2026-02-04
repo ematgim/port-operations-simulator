@@ -81,6 +81,9 @@ export const usePortData = () => {
     switch (update.type) {
       case 'SNAPSHOT':
         addLog(`SNAPSHOT: ${update.data.tugboats.length} tugboats, ${update.data.vessels.length} vessels`);
+        // Clear maps before applying snapshot
+        setTugboats(new Map());
+        setVessels(new Map());
         update.data.tugboats.forEach((t: any) => updateTugboat(t));
         update.data.vessels.forEach((v: any) => updateVessel(v));
         break;
@@ -114,6 +117,9 @@ export const usePortData = () => {
       console.log('Connected to stream');
       setConnected(true);
       addLog('Connected to stream');
+      // Clear maps on reconnection
+      setTugboats(new Map());
+      setVessels(new Map());
     };
 
     eventSource.onerror = () => {
