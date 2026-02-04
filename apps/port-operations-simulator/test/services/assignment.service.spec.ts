@@ -23,6 +23,7 @@ describe('AssignmentService', () => {
       const vessel: Vessel = {
         id: 'VESSEL_01',
         name: 'MSC Meraviglia',
+        imo: 'IMO9999999',
         type: VesselType.CRUISE,
         position: { x: 500, y: 50 },
         status: VesselStatus.AT_ENTRY,
@@ -53,6 +54,7 @@ describe('AssignmentService', () => {
       const vessel: Vessel = {
         id: 'VESSEL_01',
         name: 'MSC Meraviglia',
+        imo: 'IMO9999999',
         type: VesselType.CRUISE,
         position: { x: 500, y: 50 },
         status: VesselStatus.AT_ENTRY,
@@ -77,6 +79,7 @@ describe('AssignmentService', () => {
       const vessel: Vessel = {
         id: 'VESSEL_01',
         name: 'MSC Meraviglia',
+        imo: 'IMO9999999',
         type: VesselType.CRUISE,
         position: { x: 100, y: 0 },
         status: VesselStatus.AT_ENTRY,
@@ -166,6 +169,7 @@ describe('AssignmentService', () => {
       const vessel: Vessel = {
         id: 'VESSEL_01',
         name: 'MSC Meraviglia',
+        imo: 'IMO9999999',
         type: VesselType.CRUISE,
         position: { x: 100, y: 0 },
         status: VesselStatus.AT_ENTRY,
@@ -192,6 +196,7 @@ describe('AssignmentService', () => {
       const vessel: Vessel = {
         id: 'VESSEL_01',
         name: 'MSC Meraviglia',
+        imo: 'IMO9999999',
         type: VesselType.CRUISE,
         position: { x: 100, y: 0 },
         status: VesselStatus.AT_ENTRY,
@@ -218,6 +223,7 @@ describe('AssignmentService', () => {
       const vessel: Vessel = {
         id: 'VESSEL_01',
         name: 'MSC Meraviglia',
+        imo: 'IMO9999999',
         type: VesselType.CRUISE,
         position: { x: 100, y: 100 },
         status: VesselStatus.AT_ENTRY,
@@ -262,6 +268,7 @@ describe('AssignmentService', () => {
       const vessel: Vessel = {
         id: 'VESSEL_01',
         name: 'MSC Meraviglia',
+        imo: 'IMO9999999',
         type: VesselType.CRUISE,
         position: { x: 60, y: 60 },
         status: VesselStatus.AT_ENTRY,
@@ -297,6 +304,7 @@ describe('AssignmentService', () => {
       const vessel: Vessel = {
         id: 'VESSEL_01',
         name: 'MSC Meraviglia',
+        imo: 'IMO9999999',
         type: VesselType.CRUISE,
         position: { x: 60, y: 60 },
         status: VesselStatus.AT_ENTRY,
@@ -312,6 +320,7 @@ describe('AssignmentService', () => {
       const vessel: Vessel = {
         id: 'VESSEL_01',
         name: 'MSC Meraviglia',
+        imo: 'IMO9999999',
         type: VesselType.CRUISE,
         position: { x: 60, y: 60 },
         status: VesselStatus.AT_ENTRY,
@@ -346,6 +355,7 @@ describe('AssignmentService', () => {
       const vessel: Vessel = {
         id: 'VESSEL_01',
         name: 'MSC Meraviglia',
+        imo: 'IMO9999999',
         type: VesselType.CRUISE,
         position: { x: 0, y: 0 },
         status: VesselStatus.AT_ENTRY,

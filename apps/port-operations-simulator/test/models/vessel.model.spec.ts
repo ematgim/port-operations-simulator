@@ -12,6 +12,7 @@ describe('Vessel Model', () => {
       const vessel: Vessel = {
         id: 'VESSEL_01',
         name: 'MSC Meraviglia',
+        imo: 'IMO9999999',
         type: VesselType.CRUISE,
         position: { x: 500, y: 50 },
         status: VesselStatus.AT_ENTRY,
@@ -30,6 +31,7 @@ describe('Vessel Model', () => {
       const vessel: Vessel = {
         id: 'VESSEL_02',
         name: 'Evergreen',
+        imo: 'IMO9999998',
         type: VesselType.CONTAINER,
         position: { x: 300, y: 200 },
         status: VesselStatus.BEING_TOWED_TO_DOCK,
@@ -46,6 +48,7 @@ describe('Vessel Model', () => {
       const vessel: Vessel = {
         id: 'VESSEL_03',
         name: 'Maersk',
+        imo: 'IMO9999997',
         type: VesselType.CONTAINER,
         position: { x: 200, y: 300 },
         status: VesselStatus.DOCKED,
