@@ -2,15 +2,17 @@ import React from 'react';
 import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 
 interface TooltipProps {
-  content: string;
+  content: string | React.ReactNode;
   children: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export const TooltipProvider = TooltipPrimitive.Provider;
 
-export const Tooltip: React.FC<TooltipProps> = ({ content, children }) => {
+export const Tooltip: React.FC<TooltipProps> = ({ content, children, open, onOpenChange }) => {
   return (
-    <TooltipPrimitive.Root>
+    <TooltipPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <TooltipPrimitive.Trigger asChild>
         {children}
       </TooltipPrimitive.Trigger>

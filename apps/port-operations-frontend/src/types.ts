@@ -16,6 +16,7 @@ export interface Tugboat {
 export interface Vessel {
   vesselId: string;
   vesselName: string;
+  vesselImo: string;
   vesselType: string;
   position: Position;
   status: 'AT_ENTRY' | 'BEING_TOWED_TO_DOCK' | 'BEING_TOWED_TO_EXIT' | 'DOCKED' | 'DEPARTED' | 'REQUESTING_ASSISTANCE' | 'WAITING_FOR_TUGBOAT' | 'BEING_ASSISTED' | 'UNKNOWN';

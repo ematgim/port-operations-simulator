@@ -3,6 +3,7 @@ import { Position } from './tugboat.model';
 export interface Vessel {
   id: string;
   name: string;
+  imo: string;
   type: VesselType;
   position: Position;
   status: VesselStatus;

@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { PlusIcon, MinusIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, MinusIcon, ArrowPathIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
 import { Tugboat, Vessel, Dock } from '../types';
 import { EntityDetailsDialog } from './EntityDetailsDialog';
 import { IconButton } from './ui/IconButton';
@@ -34,6 +34,7 @@ export const PortMap: React.FC<PortMapProps> = ({ tugboats, vessels }) => {
   const [selectedEntity, setSelectedEntity] = useState<Tugboat | Vessel | null>(null);
   const [selectedEntityType, setSelectedEntityType] = useState<'tugboat' | 'vessel' | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [showLegend, setShowLegend] = useState(false);
 
   const toCanvasX = useCallback((x: number) => offsetX + x * scale, [offsetX, scale]);
   const toCanvasY = useCallback((y: number) => offsetY + y * scale, [offsetY, scale]);
@@ -366,6 +367,50 @@ export const PortMap: React.FC<PortMapProps> = ({ tugboats, vessels }) => {
 
         <div className="absolute bottom-4 left-4 bg-bg-secondary/90 backdrop-blur px-4 py-2 rounded-lg text-sm text-text-secondary border border-border-color">
           <span>Port Area: 1000 x 1000 units</span>
+        </div>
+
+        {/* Legend Button */}
+        <div className="absolute bottom-4 right-4">
+          <Tooltip 
+            content={
+              <div className="space-y-3 p-2 min-w-[200px]">
+                <div className="font-semibold text-accent-primary mb-2">🎨 Legend</div>
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="w-5 h-5 rounded-full border-2 border-accent-primary flex-shrink-0"></div>
+                  <span>Tugboat - Idle</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="w-5 h-5 rounded-full border-2 border-accent-primary bg-accent-primary flex-shrink-0"></div>
+                  <span>Tugboat - Moving</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="w-5 h-5 rounded-full border-2 border-accent-warning bg-accent-warning flex-shrink-0"></div>
+                  <span>Tugboat - Assisting</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="w-5 h-5 rounded border-2 border-accent-secondary rotate-45 flex-shrink-0"></div>
+                  <span>Vessel - Requesting</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="w-5 h-5 rounded border-2 border-accent-secondary bg-accent-secondary rotate-45 flex-shrink-0"></div>
+                  <span>Vessel - Waiting</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="w-5 h-5 rounded border-2 border-accent-warning bg-accent-warning rotate-45 flex-shrink-0"></div>
+                  <span>Vessel - Assisted</span>
+                </div>
+              </div>
+            }
+            open={showLegend}
+            onOpenChange={setShowLegend}
+          >
+            <IconButton
+              icon={<QuestionMarkCircleIcon className="w-6 h-6" />}
+              onClick={() => setShowLegend(!showLegend)}
+              label="Show Legend"
+              className="bg-bg-secondary/90 backdrop-blur hover:bg-bg-tertiary"
+            />
+          </Tooltip>
         </div>
 
         <EntityDetailsDialog

@@ -35,7 +35,7 @@ export class StateManager {
   getSnapshot() {
     return {
       tugboats: this.getTugboats(),
-      vessels: this.getVessels(),
+      vessels: this.getVessels().filter(v => v.status !== 'DEPARTED'),
     };
   }
 }

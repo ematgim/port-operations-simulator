@@ -11,6 +11,7 @@ export interface TugboatPosition {
 export interface VesselPosition {
   vesselId: string;
   vesselName: string;
+  vesselImo: string;
   vesselType: string;
   position: { x: number; y: number };
   status: string;

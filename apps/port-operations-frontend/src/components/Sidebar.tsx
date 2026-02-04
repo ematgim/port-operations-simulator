@@ -15,14 +15,34 @@ export const Sidebar: React.FC<SidebarProps> = ({ tugboats, vessels }) => {
     a.tugboatName.localeCompare(b.tugboatName)
   );
 
-  const sortedVessels = Array.from(vessels.values()).sort((a, b) =>
-    a.vesselName.localeCompare(b.vesselName)
-  );
+  const sortedVessels = Array.from(vessels.values())
+    .filter((v) => v.status !== 'DEPARTED')
+    .sort((a, b) => {
+      // Define priority order
+      const statusPriority: Record<string, number> = {
+        'AT_ENTRY': 1,
+        'REQUESTING_ASSISTANCE': 2,
+        'WAITING_FOR_TUGBOAT': 3,
+        'BEING_ASSISTED': 4,
+        'BEING_TOWED_TO_DOCK': 5,
+        'BEING_TOWED_TO_EXIT': 6,
+        'DOCKED': 7,
+      };
+      
+      const priorityA = statusPriority[a.status] || 999;
+      const priorityB = statusPriority[b.status] || 999;
+      
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+      
+      return a.vesselName.localeCompare(b.vesselName);
+    });
 
   return (
     <aside className="w-full md:w-80 lg:w-96 bg-bg-secondary border-l-2 border-border-color overflow-y-auto p-6">
       {/* Statistics Panel */}
-      <div className="mb-8">
+      <div className="mb-8 stats-panel">
         <h2 className="text-lg font-semibold mb-4 text-accent-primary">📊 Statistics</h2>
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-bg-tertiary p-4 rounded-lg text-center border border-border-color hover:-translate-y-0.5 hover:border-accent-primary transition-all duration-200">
@@ -44,8 +64,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ tugboats, vessels }) => {
         </div>
       </div>
 
-      {/* Legend Panel */}
-      <div className="mb-8">
+      {/* Legend Panel - Hidden, now in map */}
+      <div className="mb-8 hidden">
         <h2 className="text-lg font-semibold mb-4 text-accent-primary">🎨 Legend</h2>
         <div className="space-y-3">
           <div className="flex items-center gap-3 text-sm text-text-secondary">
@@ -78,28 +98,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ tugboats, vessels }) => {
       {/* Tugboats List */}
       <div className="mb-8">
         <h2 className="text-lg font-semibold mb-4 text-accent-primary">🚤 Tugboats</h2>
-        <div className="space-y-2 max-h-72 overflow-y-auto">
+        <div className="space-y-1 max-h-72 overflow-y-auto">
           {sortedTugboats.length === 0 ? (
             <div className="text-center py-8 text-text-secondary text-sm">No tugboats</div>
           ) : (
             sortedTugboats.map((tugboat) => (
               <div
                 key={tugboat.tugboatId}
-                className="bg-bg-tertiary p-3 rounded-md border-l-4 border-accent-primary text-sm hover:bg-opacity-80 hover:translate-x-1 transition-all duration-200 cursor-pointer"
+                className="bg-bg-tertiary p-2 rounded-md text-sm hover:bg-opacity-80 transition-all duration-200 cursor-pointer"
               >
-                <div className="font-semibold mb-1 text-base">{tugboat.tugboatName}</div>
-                <div className="text-text-secondary text-xs leading-relaxed">
-                  Position: ({Math.round(tugboat.position.x)}, {Math.round(tugboat.position.y)})<br />
-                  Speed: {tugboat.speed} units/s
-                  {tugboat.assignedVesselId && (
-                    <>
-                      <br />→ {tugboat.assignedVesselId}
-                    </>
-                  )}
-                </div>
-                <div className="mt-2">
+                <div className="flex justify-between items-start">
+                  <div className="font-semibold text-base">{tugboat.tugboatName}</div>
                   <Badge status={tugboat.status} />
                 </div>
+                {tugboat.assignedVesselId && (
+                  <div className="text-text-secondary text-xs leading-relaxed">
+                    → {tugboat.assignedVesselId}
+                  </div>
+                )}
               </div>
             ))
           )}
@@ -109,28 +125,29 @@ export const Sidebar: React.FC<SidebarProps> = ({ tugboats, vessels }) => {
       {/* Vessels List */}
       <div>
         <h2 className="text-lg font-semibold mb-4 text-accent-primary">⚓ Vessels</h2>
-        <div className="space-y-2 max-h-72 overflow-y-auto">
+        <div className="space-y-1 max-h-72 overflow-y-auto">
           {sortedVessels.length === 0 ? (
             <div className="text-center py-8 text-text-secondary text-sm">No vessels</div>
           ) : (
             sortedVessels.map((vessel) => (
               <div
                 key={vessel.vesselId}
-                className="bg-bg-tertiary p-3 rounded-md border-l-4 border-accent-secondary text-sm hover:bg-opacity-80 hover:translate-x-1 transition-all duration-200 cursor-pointer"
+                className="bg-bg-tertiary p-2 rounded-md text-sm hover:bg-opacity-80 transition-all duration-200 cursor-pointer"
               >
-                <div className="font-semibold mb-1 text-base">{vessel.vesselName}</div>
-                <div className="text-text-secondary text-xs leading-relaxed">
-                  Type: {vessel.vesselType}<br />
-                  Position: ({Math.round(vessel.position.x)}, {Math.round(vessel.position.y)})
-                  {vessel.assignedTugboatId && (
-                    <>
-                      <br />← {vessel.assignedTugboatId}
-                    </>
-                  )}
-                </div>
-                <div className="mt-2">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="font-semibold text-base">{vessel.vesselName}</div>
+                    <div className="text-text-secondary text-xs mt-0.5">
+                      {vessel.vesselImo}
+                    </div>
+                  </div>
                   <Badge status={vessel.status} />
                 </div>
+                {vessel.assignedTugboatId && (
+                  <div className="text-text-secondary text-xs leading-snug mt-1">
+                    ← {vessel.assignedTugboatId}
+                  </div>
+                )}
               </div>
             ))
           )}

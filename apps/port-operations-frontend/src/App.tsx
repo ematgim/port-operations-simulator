@@ -11,11 +11,11 @@ const App: React.FC = () => {
   const [showDebug, setShowDebug] = useState(false);
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen overflow-x-hidden">
       <Header connected={connected} onToggleDebug={() => setShowDebug(!showDebug)} />
       <DebugPanel visible={showDebug} logs={debugLogs} />
       <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
-        <main className="flex-1 relative bg-bg-primary">
+        <main className="flex-1 relative bg-bg-primary overflow-hidden">
           <PortMap tugboats={tugboats} vessels={vessels} />
         </main>
         <Sidebar tugboats={tugboats} vessels={vessels} />

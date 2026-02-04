@@ -38,6 +38,7 @@ export class VesselService {
     const vessel: Vessel = {
       id: `V${this.vesselIdCounter++}`,
       name: catalogEntry.name,
+      imo: catalogEntry.imo,
       type: catalogEntry.type as VesselType,
       position: this.getEntryPointPosition(),
       status: VesselStatus.AT_ENTRY,

@@ -29,6 +29,10 @@
     color: var(--color-text-primary);
     overflow: hidden;
   }
+  
+  html {
+    overflow-x: hidden;
+  }
 }
 
 /* Canvas-specific styles that can't be handled by Tailwind */
@@ -37,3 +41,15 @@
   height: 100%;
 }
 
+/* Hide debug panel and statistics */
+#debug-panel {
+  display: none !important;
+}
+
+#debug-button {
+  display: none !important;
+}
+
+.stats-panel {
+  display: none !important;
+}

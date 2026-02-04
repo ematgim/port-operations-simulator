@@ -77,6 +77,7 @@ rabbitMQConsumer.on('vessel-request', (vessel: any) => {
   const vesselData = {
     vesselId: vessel.vesselId,
     vesselName: vessel.vesselName,
+    vesselImo: vessel.vesselImo,
     vesselType: vessel.vesselType,
     position: vessel.position,
     status: vessel.status || 'REQUESTING_ASSISTANCE',

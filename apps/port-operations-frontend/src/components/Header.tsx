@@ -24,6 +24,7 @@ export const Header: React.FC<HeaderProps> = ({ connected, onToggleDebug }) => {
           <StatusIndicator connected={connected} />
           <span id="status-text">{connected ? 'Connected' : 'Disconnected'}</span>
           <Button
+            id="debug-button"
             variant="ghost"
             size="sm"
             onClick={onToggleDebug}
