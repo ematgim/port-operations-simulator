@@ -83,6 +83,13 @@
           "buildTarget": "port-operations-simulator:build:production"
         }
       }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "apps/port-operations-simulator/jest.config.ts"
+      }
     }
   },
   "tags": []
