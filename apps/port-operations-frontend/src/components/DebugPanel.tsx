@@ -11,24 +11,9 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({ visible, logs }) => {
   return (
     <div
       id="debug-panel"
-      style={{
-        display: 'block',
-        position: 'fixed',
-        bottom: '10px',
-        right: '10px',
-        background: '#1a1a1a',
-        color: '#00ff00',
-        maxWidth: '400px',
-        height: '300px',
-        overflowY: 'auto',
-        fontFamily: 'monospace',
-        fontSize: '11px',
-        border: '2px solid #00ff00',
-        padding: '10px',
-        zIndex: 1000,
-      }}
+      className="fixed bottom-3 right-3 bg-black/90 text-green-400 w-full max-w-md h-80 overflow-y-auto font-mono text-xs border-2 border-green-400 p-3 z-[1000] rounded-lg shadow-2xl"
     >
-      <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+      <div className="whitespace-pre-wrap break-all">
         {logs.join('\n')}
       </div>
     </div>
