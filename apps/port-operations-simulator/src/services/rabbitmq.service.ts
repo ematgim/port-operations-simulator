@@ -3,7 +3,7 @@ import * as amqp from 'amqplib';
 export class RabbitMQService {
   private connection: any = null;
   private channel: any = null;
-  private readonly queueName = 'tugboat-movements';
+  private readonly queueName = 'port-events';
 
   async connect(url: string = 'amqp://localhost'): Promise<void> {
     try {

@@ -347,23 +347,29 @@ async function main() {
         }
       }
 
-      // CASE 7: Move idle tugboats to base
+      // CASE 7: Move idle tugboats to base (only if not assigned to any vessel)
       for (const tugboat of tugboats) {
         if (tugboat.status === TugboatStatus.IDLE) {
-          const tugboatBase = portService.getTugboatBase();
-          const distanceToBase = assignmentService.calculateDistance(tugboat.position, tugboatBase.position);
+          // Check if tugboat is assigned to any vessel
+          const assignment = tugboatSimulator.getAssignment(tugboat.id);
           
-          // Only move if not already at base (distance > 5 units)
-          if (distanceToBase > 5) {
-            assignmentService.moveTugboatTowardsVessel(
-              tugboat,
-              { position: tugboatBase.position } as any,
-              SIMULATION_INTERVAL
-            );
+          // Only move to base if not assigned
+          if (!assignment) {
+            const tugboatBase = portService.getTugboatBase();
+            const distanceToBase = assignmentService.calculateDistance(tugboat.position, tugboatBase.position);
             
-            // Log occasionally to avoid spam
-            if (Math.random() < 0.02) {
-              console.log(`   🏠 ${tugboat.name} returning to base... Distance: ${Math.round(distanceToBase)}`);
+            // Only move if not already at base (distance > 5 units)
+            if (distanceToBase > 5) {
+              assignmentService.moveTugboatTowardsVessel(
+                tugboat,
+                { position: tugboatBase.position } as any,
+                SIMULATION_INTERVAL
+              );
+              
+              // Log occasionally to avoid spam
+              if (Math.random() < 0.02) {
+                console.log(`   🏠 ${tugboat.name} returning to base... Distance: ${Math.round(distanceToBase)}`);
+              }
             }
           }
         }

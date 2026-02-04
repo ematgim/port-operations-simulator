@@ -5,7 +5,7 @@ import { TugboatPosition, VesselPosition, AssignmentEvent } from '../types';
 export class RabbitMQConsumer extends EventEmitter {
   private connection: any = null;
   private channel: any = null;
-  private readonly queueName = 'tugboat-movements';
+  private readonly queueName = 'port-events';
 
   async connect(url: string = 'amqp://localhost'): Promise<void> {
     try {
