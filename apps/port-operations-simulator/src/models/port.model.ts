@@ -13,6 +13,7 @@ export enum LocationType {
   ENTRY_POINT = 'ENTRY_POINT',
   DOCK = 'DOCK',
   EXIT_POINT = 'EXIT_POINT',
+  TUGBOAT_BASE = 'TUGBOAT_BASE',
 }
 
 export interface DockAssignment {

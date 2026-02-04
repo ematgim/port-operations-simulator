@@ -11,7 +11,10 @@ const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://localhost';
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:8080', 'http://localhost:5173'],
+  origin: function(origin, callback) {
+    // Allow all origins for development
+    callback(null, true);
+  },
   credentials: true
 }));
 app.use(express.json());
@@ -26,6 +29,13 @@ const clients: Set<Response> = new Set();
 
 // Broadcast update to all connected clients
 function broadcast(update: StreamUpdate): void {
+  if (clients.size > 0 && update.type === 'TUGBOAT_POSITION') {
+    if (Math.random() < 0.1) {
+      console.log(`📤 Broadcasting ${update.type} to ${clients.size} clients:`, JSON.stringify(update.data).substring(0, 200));
+    }
+  } else if (clients.size > 0 && update.type !== 'PORT_STATUS') {
+    console.log(`📤 Broadcasting ${update.type} to ${clients.size} clients`);
+  }
   const data = `data: ${JSON.stringify(update)}\n\n`;
   clients.forEach((client) => {
     try {
@@ -39,11 +49,28 @@ function broadcast(update: StreamUpdate): void {
 
 // Setup RabbitMQ event handlers
 rabbitMQConsumer.on('tugboat-position', (tugboat: any) => {
+  // Log every 10th message to avoid spam
+  if (Math.random() < 0.1) {
+    console.log(`📥 Received tugboat position:`, JSON.stringify(tugboat));
+  }
   stateManager.updateTugboat(tugboat);
   broadcast({
     type: 'TUGBOAT_POSITION',
     timestamp: new Date(),
     data: tugboat,
+  });
+});
+
+rabbitMQConsumer.on('vessel-position', (vessel: any) => {
+  // Log every 10th message to avoid spam
+  if (Math.random() < 0.1) {
+    console.log(`📥 Received vessel position:`, JSON.stringify(vessel));
+  }
+  stateManager.updateVessel(vessel);
+  broadcast({
+    type: 'VESSEL_POSITION',
+    timestamp: new Date(),
+    data: vessel,
   });
 });
 

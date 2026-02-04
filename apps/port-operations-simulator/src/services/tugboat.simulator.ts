@@ -28,22 +28,19 @@ export class TugboatSimulator {
 
   private initializeTugboats(): void {
     const tugboatData = [
-      { id: '1', name: 'Hercules', capacity: 50, speed: 15 },
-      { id: '2', name: 'Neptune', capacity: 60, speed: 12 },
-      { id: '3', name: 'Atlas', capacity: 55, speed: 14 },
-      { id: '4', name: 'Titan', capacity: 45, speed: 16 },
+      { id: '1', name: 'Hercules', capacity: 50, speed: 10 },
     ];
 
     tugboatData.forEach((data) => {
       const tugboat: Tugboat = {
         ...data,
-        position: this.randomPosition(),
+        position: { x: 500, y: 500 }, // Posición fija en el centro del puerto
         status: TugboatStatus.IDLE,
       };
       this.tugboats.set(data.id, tugboat);
     });
 
-    console.log(`🚢 Initialized ${this.tugboats.size} tugboats`);
+    console.log(`🚢 Initialized ${this.tugboats.size} tugboat(s) at port`);
   }
 
   private randomPosition(): Position {

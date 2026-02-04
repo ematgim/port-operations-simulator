@@ -284,6 +284,27 @@ h2 {
     color: var(--accent-warning);
 }
 
+.entity-status.AT_ENTRY {
+    background: rgba(233, 69, 96, 0.2);
+    color: var(--accent-secondary);
+}
+
+.entity-status.BEING_TOWED_TO_DOCK,
+.entity-status.BEING_TOWED_TO_EXIT {
+    background: rgba(255, 170, 0, 0.2);
+    color: var(--accent-warning);
+}
+
+.entity-status.DOCKED {
+    background: rgba(0, 255, 136, 0.2);
+    color: var(--accent-success);
+}
+
+.entity-status.DEPARTED {
+    background: rgba(160, 160, 160, 0.2);
+    color: var(--text-secondary);
+}
+
 .map-section {
     flex: 1;
     position: relative;

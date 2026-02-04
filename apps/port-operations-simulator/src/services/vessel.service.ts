@@ -44,14 +44,14 @@ export class VesselService {
       name,
       type: this.randomVesselType(),
       position: this.getEntryPointPosition(),
-      status: VesselStatus.ARRIVING,
+      status: VesselStatus.AT_ENTRY,
       requestTime: new Date(),
     };
 
     this.vessels.set(vessel.id, vessel);
-    console.log(
-      `🚢 New vessel arriving at port: ${vessel.name} (${vessel.type}) at entry point`
-    );
+    // console.log(
+    //   `🚢 New vessel at entry point: ${vessel.name} (${vessel.type})`
+    // );
 
     return vessel;
   }
@@ -79,30 +79,6 @@ export class VesselService {
     if (vessel) {
       Object.assign(vessel, updates);
     }
-  }
-
-  getVesselsRequestingAssistance(): Vessel[] {
-    return Array.from(this.vessels.values()).filter(
-      (v) => v.status === VesselStatus.REQUESTING_ASSISTANCE || v.status === VesselStatus.ARRIVING
-    );
-  }
-
-  getVesselsWaitingForTugboat(): Vessel[] {
-    return Array.from(this.vessels.values()).filter(
-      (v) => v.status === VesselStatus.WAITING_FOR_TUGBOAT
-    );
-  }
-
-  getVesselsWaitingForDeparture(): Vessel[] {
-    return Array.from(this.vessels.values()).filter(
-      (v) => v.status === VesselStatus.WAITING_FOR_DEPARTURE
-    );
-  }
-
-  getDockedVessels(): Vessel[] {
-    return Array.from(this.vessels.values()).filter(
-      (v) => v.status === VesselStatus.DOCKED
-    );
   }
 
   getAllVessels(): Vessel[] {

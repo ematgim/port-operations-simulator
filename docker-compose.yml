@@ -28,7 +28,7 @@ services:
       RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672
       SIMULATION_INTERVAL: 1000
       VESSEL_SPAWN_INTERVAL: 20000
-      POSITION_UPDATE_INTERVAL: 3000
+      POSITION_UPDATE_INTERVAL: 1000
       ASSISTANCE_DURATION: 5000
     depends_on:
       rabbitmq:
@@ -69,10 +69,7 @@ services:
 
 volumes:
   rabbitmq_data:
-    driver_opts:
-      type: tmpfs
-      device: tmpfs
-      o: size=5GB
+    driver: local
 
 networks:
   tug-tracker-network:

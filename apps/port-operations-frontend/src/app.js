@@ -1,5 +1,8 @@
 // Configuration
-const API_URL = 'http://localhost:3000';
+// Use relative URL to connect to API on the same host as the frontend
+const API_URL = window.location.hostname === 'localhost' 
+    ? 'http://localhost:3000' 
+    : `http://${window.location.hostname}:3000`;
 
 const PORT_SIZE = 1000;
 const GRID_SIZE = 100;
@@ -24,8 +27,32 @@ let isDragging = false;
 let lastMouseX = 0;
 let lastMouseY = 0;
 
+// Debug logs
+const debugLogs = [];
+function addLog(msg) {
+    debugLogs.push(`[${new Date().toLocaleTimeString()}] ${msg}`);
+    if (debugLogs.length > 100) debugLogs.shift();
+    localStorage.setItem('debugLogs', JSON.stringify(debugLogs));
+    updateDebugPanel();
+}
+
+function updateDebugPanel() {
+    const panel = document.getElementById('debug-logs');
+    if (panel) {
+        panel.textContent = debugLogs.join('\n');
+        panel.scrollTop = panel.scrollHeight;
+    }
+}
+
+function toggleDebugPanel() {
+    const panel = document.getElementById('debug-panel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    updateDebugPanel();
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    addLog('Page loaded, initializing...');
     canvas = document.getElementById('port-map');
     ctx = canvas.getContext('2d');
     
@@ -35,6 +62,8 @@ document.addEventListener('DOMContentLoaded', () => {
     setupCanvasInteraction();
     setupControls();
     connectToStream();
+    
+    addLog('Initialization complete, waiting for stream...');
     
     // Start render loop
     requestAnimationFrame(render);
@@ -130,9 +159,16 @@ function connectToStream() {
     eventSource.onmessage = (event) => {
         try {
             const update = JSON.parse(event.data);
+            if (update.type === 'TUGBOAT_POSITION') {
+                console.log('📍 Received TUGBOAT_POSITION:', update.data);
+                addLog(`TUGBOAT_POSITION: ${update.data.tugboatId} at (${Math.round(update.data.position.x)}, ${Math.round(update.data.position.y)})`);
+            } else {
+                addLog(`${update.type} received`);
+            }
             handleUpdate(update);
         } catch (error) {
             console.error('Error parsing message:', error);
+            addLog(`Error parsing: ${error.message}`);
         }
     };
 }
@@ -151,13 +187,25 @@ function updateConnectionStatus(connected) {
 }
 
 function handleUpdate(update) {
+    console.log('📨 Received update:', update.type);
+    addLog(`Received ${update.type}`);
     switch(update.type) {
         case 'SNAPSHOT':
-            update.data.tugboats.forEach(t => updateTugboat(t));
+            console.log('📸 Received SNAPSHOT with', update.data.tugboats.length, 'tugboats and', update.data.vessels.length, 'vessels');
+            addLog(`SNAPSHOT: ${update.data.tugboats.length} tugboats, ${update.data.vessels.length} vessels`);
+            update.data.tugboats.forEach(t => {
+                console.log('  - Tugboat from SNAPSHOT:', t.tugboatId, t.position);
+                updateTugboat(t);
+            });
             update.data.vessels.forEach(v => updateVessel(v));
             break;
         case 'TUGBOAT_POSITION':
+            console.log('📍 TUGBOAT_POSITION data:', update.data);
             updateTugboat(update.data);
+            break;
+        case 'VESSEL_POSITION':
+            console.log('📍 VESSEL_POSITION data:', update.data);
+            updateVessel(update.data);
             break;
         case 'VESSEL_REQUEST':
         case 'VESSEL_ARRIVED':
@@ -182,6 +230,8 @@ function handleUpdate(update) {
 }
 
 function updateTugboat(data) {
+    console.log('🚢 Updating tugboat:', data.tugboatId, 'Position:', data.position);
+    addLog(`Update tugboat ${data.tugboatId} to (${Math.round(data.position.x)}, ${Math.round(data.position.y)})`);
     tugboats.set(data.tugboatId, {
         ...data,
         timestamp: new Date(data.timestamp)
@@ -189,15 +239,33 @@ function updateTugboat(data) {
 }
 
 function updateVessel(data) {
+    const normalizedStatus = normalizeVesselStatus(data.status);
     vessels.set(data.vesselId, {
         vesselId: data.vesselId,
         vesselName: data.vesselName,
         vesselType: data.vesselType,
         position: data.position,
-        status: data.status,
+        status: normalizedStatus,
         assignedTugboatId: data.assignedTugboatId,
         timestamp: new Date()
     });
+}
+
+function normalizeVesselStatus(status) {
+    switch (status) {
+        case 'AT_ENTRY':
+            return 'AT_ENTRY';
+        case 'BEING_TOWED_TO_DOCK':
+            return 'BEING_TOWED_TO_DOCK';
+        case 'BEING_TOWED_TO_EXIT':
+            return 'BEING_TOWED_TO_EXIT';
+        case 'DOCKED':
+            return 'DOCKED';
+        case 'DEPARTED':
+            return 'DEPARTED';
+        default:
+            return status || 'UNKNOWN';
+    }
 }
 
 function updateVesselFromEvent(event) {
@@ -290,6 +358,25 @@ function render() {
     // Save context
     ctx.save();
     
+    // Debug log every few frames
+    if (Math.random() < 0.002) {
+        console.log(`🎨 Rendering: ${tugboats.size} tugboats, ${vessels.size} vessels`);
+        addLog(`Rendering ${tugboats.size} tugboats (${Array.from(tugboats.values()).map(t => `${t.tugboatName}: (${Math.round(t.position.x)}, ${Math.round(t.position.y)})`).join(', ')})`);
+    }
+    
+    // Sync towed vessel positions with tugboat for smoother movement
+    vessels.forEach(vessel => {
+        if (
+            (vessel.status === 'BEING_TOWED_TO_DOCK' || vessel.status === 'BEING_TOWED_TO_EXIT') &&
+            vessel.assignedTugboatId
+        ) {
+            const tugboat = tugboats.get(vessel.assignedTugboatId);
+            if (tugboat) {
+                vessel.position = { ...tugboat.position };
+            }
+        }
+    });
+
     // Draw grid
     drawGrid();
 
@@ -431,12 +518,16 @@ function drawVessel(vessel) {
     
     // Determine color based on status
     let color = '#e94560';
-    if (vessel.status === 'BEING_ASSISTED') {
+    if (
+        vessel.status === 'BEING_ASSISTED' ||
+        vessel.status === 'BEING_TOWED_TO_DOCK' ||
+        vessel.status === 'BEING_TOWED_TO_EXIT'
+    ) {
         color = '#ffaa00';
     }
     
     // Blink effect for requesting
-    if (vessel.status === 'REQUESTING_ASSISTANCE') {
+    if (vessel.status === 'REQUESTING_ASSISTANCE' || vessel.status === 'AT_ENTRY') {
         const opacity = (Math.sin(Date.now() / 300) + 1) / 2;
         color = `rgba(233, 69, 96, ${opacity})`;
     }

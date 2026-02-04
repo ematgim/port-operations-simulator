@@ -4,28 +4,19 @@ import { VesselService } from './services/vessel.service';
 import { AssignmentService } from './services/assignment.service';
 import { PortService } from './services/port.service';
 import { TugboatStatus } from './models/tugboat.model';
-import { VesselStatus, AssignmentEvent } from './models/vessel.model';
-import { LocationType } from './models/port.model';
+import { VesselStatus } from './models/vessel.model';
 
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://localhost';
 const SIMULATION_INTERVAL = parseInt(
-  process.env.SIMULATION_INTERVAL || '1000',
+  process.env.SIMULATION_INTERVAL || '100',
   10
 );
 const VESSEL_SPAWN_INTERVAL = parseInt(
-  process.env.VESSEL_SPAWN_INTERVAL || '20000',
+  process.env.VESSEL_SPAWN_INTERVAL || '30000',
   10
 );
-const POSITION_UPDATE_INTERVAL = parseInt(
-  process.env.POSITION_UPDATE_INTERVAL || '3000',
-  10
-);
-const TOWING_TO_DOCK_DURATION = parseInt(
-  process.env.TOWING_TO_DOCK_DURATION || '10000',
-  10
-);
-const TOWING_TO_EXIT_DURATION = parseInt(
-  process.env.TOWING_TO_EXIT_DURATION || '8000',
+const DOCK_DURATION = parseInt(
+  process.env.DOCK_DURATION || '20000',
   10
 );
 
@@ -34,6 +25,7 @@ async function main() {
   console.log(`📡 RabbitMQ URL: ${RABBITMQ_URL}`);
   console.log(`⏱️  Simulation Interval: ${SIMULATION_INTERVAL}ms`);
   console.log(`🚢 Vessel Spawn Interval: ${VESSEL_SPAWN_INTERVAL}ms`);
+  console.log(`⏱️  Dock Duration: ${DOCK_DURATION}ms`);
 
   const rabbitMQ = new RabbitMQService();
   const portService = new PortService();
@@ -52,369 +44,360 @@ async function main() {
     });
 
     console.log('\n🎮 Starting simulation...\n');
-    let lastPositionUpdateTime = 0;
+
     // Spawn vessels periodically at entry point
     const vesselSpawnInterval = setInterval(() => {
-      // Limit to max 6 vessels
-      if (vesselService.getAllVessels().length >= 6) {
+      // Limit to max 1 vessel for testing
+      if (vesselService.getAllVessels().length >= 1) {
         return;
       }
       
       const vessel = vesselService.generateVessel();
-      rabbitMQ.publishMovement({
-        type: 'VESSEL_ARRIVED',
-        vesselId: vessel.id,
-        vesselName: vessel.name,
-        vesselType: vessel.type,
-        position: vessel.position,
-        status: vessel.status,
-        timestamp: new Date(),
-      }).catch((error) => {
-        console.error('Failed to publish vessel arrival:', error);
-      });
+      // rabbitMQ.publishMovement({
+      //   type: 'VESSEL_ARRIVED',
+      //   vesselId: vessel.id,
+      //   vesselName: vessel.name,
+      //   vesselType: vessel.type,
+      //   position: vessel.position,
+      //   status: vessel.status,
+      //   timestamp: new Date(),
+      // }).catch((error) => {
+      //   console.error('Failed to publish vessel arrival:', error);
+      // });
 
-      // Automatically request assistance after arrival
-      setTimeout(() => {
-        vesselService.updateVessel(vessel.id, {
-          status: VesselStatus.REQUESTING_ASSISTANCE,
-        });
-      }, 2000);
+      console.log(`\n🚢 ${vessel.name} arrived at entry point (${Math.round(vessel.position.x)}, ${Math.round(vessel.position.y)})`);
     }, VESSEL_SPAWN_INTERVAL);
 
     // Main simulation loop
-    const simulationInterval = setInterval(() => {
-      // 1. Assign tugboats to vessels requesting assistance (to tow to dock)
-      const requestingVessels = vesselService.getVesselsRequestingAssistance()
-        .filter(v => !v.assignedTugboatId); // Only assign if not already assigned
-      requestingVessels.forEach((vessel) => {
-        const availableDock = portService.findClosestAvailableDock(vessel.position);
+    let lastVesselPositionPublishTime = 0;
+    const simulationInterval = setInterval(async () => {
+      // Get all tugboats and vessels
+      const tugboats = tugboatSimulator.getTugboats();
+      const vessels = vesselService.getAllVessels();
+
+      // Process each vessel based on its status
+      for (const vessel of vessels) {
         
-        if (!availableDock) {
-          console.log(`⏳ No docks available for ${vessel.name}, waiting...`);
-          return;
-        }
-
-        const tugboat = assignmentService.findBestAvailableTugboat(
-          tugboatSimulator.getTugboats(),
-          vessel
-        );
-
-        if (tugboat) {
-          const event = assignmentService.assignTugboatToVessel(
-            tugboat,
-            vessel
-          );
-          if (event) {
-            // Assign dock to vessel
+        // CASE 1: Vessel at entry, assign tugboat to tow to dock
+        if (vessel.status === VesselStatus.AT_ENTRY && !vessel.assignedTugboatId) {
+          const availableTugboat = tugboats.find(t => t.status === TugboatStatus.IDLE);
+          const availableDock = portService.findClosestAvailableDock(vessel.position);
+          
+          if (availableTugboat && availableDock) {
+            // Assign tugboat to vessel
+            vessel.assignedTugboatId = availableTugboat.id;
+            vessel.assignedDockId = availableDock.id;
+            availableTugboat.status = TugboatStatus.MOVING;
+            
+            tugboatSimulator.assignTugboatToVessel(availableTugboat.id, vessel.id);
             portService.assignVesselToDock(vessel.id, availableDock.id);
-
-            // Update states - IMPORTANT: Update vessel status FIRST to avoid reassignment
-            vesselService.updateVessel(vessel.id, {
-              status: VesselStatus.WAITING_FOR_TUGBOAT,
-              assignedTugboatId: tugboat.id,
-              assignedDockId: availableDock.id,
-              estimatedArrivalTime: event.estimatedArrivalTime,
-            });
-
-            // Then update tugboat status
-            tugboatSimulator.updateTugboat(tugboat.id, {
-              status: TugboatStatus.MOVING,
-            });
-            tugboatSimulator.assignTugboatToVessel(tugboat.id, vessel.id);
-
-            console.log(`🎯 ${vessel.name} will be towed to ${availableDock.name}`);
-
-            rabbitMQ.publishMovement({
-              type: 'ASSIGNMENT',
-              ...event,
-              destinationType: 'DOCK',
-              destination: availableDock.name,
-            }).catch((error) => {
-              console.error('Failed to publish assignment event:', error);
-            });
+            
+            console.log(`\n🎯 ASSIGNMENT: ${availableTugboat.name} assigned to tow ${vessel.name} to ${availableDock.name}`);
+            console.log(`   Tugboat at (${Math.round(availableTugboat.position.x)}, ${Math.round(availableTugboat.position.y)})`);
+            console.log(`   Vessel at (${Math.round(vessel.position.x)}, ${Math.round(vessel.position.y)})`);
+            console.log(`   Dock at (${availableDock.position.x}, ${availableDock.position.y})`);
+            
+            // await rabbitMQ.publishMovement({
+            //   type: 'ASSIGNMENT',
+            //   vesselId: vessel.id,
+            //   vesselName: vessel.name,
+            //   tugboatId: availableTugboat.id,
+            //   tugboatName: availableTugboat.name,
+            //   timestamp: new Date(),
+            //   eventType: 'ASSIGNMENT',
+            //   destinationType: 'DOCK',
+            //   destination: availableDock.name,
+            // });
           }
         }
-      });
-
-      // 2. Move tugboats towards vessels (to start towing to dock)
-      const waitingVessels = vesselService.getVesselsWaitingForTugboat();
-      waitingVessels.forEach((vessel) => {
-        if (!vessel.assignedTugboatId) return;
-
-        const tugboat = tugboatSimulator.getTugboat(vessel.assignedTugboatId);
-        if (!tugboat) return;
-
-        const arrived = assignmentService.moveTugboatTowardsVessel(
-          tugboat,
-          vessel,
-          SIMULATION_INTERVAL
-        );
-
-        if (arrived) {
-          console.log(
-            `✅ ${tugboat.name} arrived at ${vessel.name} - Starting towing to dock`
-          );
-
-          tugboatSimulator.updateTugboat(tugboat.id, {
-            status: TugboatStatus.ASSISTING,
-          });
-          vesselService.updateVessel(vessel.id, {
-            status: VesselStatus.BEING_TOWED_TO_DOCK,
-          });
-
-          const arrivalEvent: AssignmentEvent = {
-            vesselId: vessel.id,
-            vesselName: vessel.name,
-            tugboatId: tugboat.id,
-            tugboatName: tugboat.name,
-            timestamp: new Date(),
-            eventType: 'TUGBOAT_ARRIVED',
-          };
-
-          rabbitMQ.publishMovement(arrivalEvent).catch((error) => {
-            console.error('Failed to publish arrival event:', error);
-          });
-        }
-      });
-
-      // 3. Move vessels towards docks when being towed
-      const vesselBeingTowedToDock = vesselService.getAllVessels().filter(
-        v => v.status === VesselStatus.BEING_TOWED_TO_DOCK && v.assignedDockId
-      );
-      
-      vesselBeingTowedToDock.forEach((vessel) => {
-        if (!vessel.assignedDockId || !vessel.assignedTugboatId) return;
         
-        const dock = portService.getDock(vessel.assignedDockId);
-        const tugboat = tugboatSimulator.getTugboat(vessel.assignedTugboatId);
-        
-        if (!dock || !tugboat) return;
-        
-        // Move vessel towards dock
-        const arrived = assignmentService.moveTugboatTowardsVessel(
-          vessel as any,
-          { position: dock.position } as any,
-          SIMULATION_INTERVAL
-        );
-        
-        if (arrived) {
-          console.log(
-            `⚓ ${vessel.name} has been docked at ${dock.name} by ${tugboat.name}`
-          );
-
-          // Update vessel position to dock position
-          vesselService.updateVessel(vessel.id, {
-            position: { ...dock.position },
-            status: VesselStatus.DOCKED,
-            dockedAt: new Date(),
-          });
-
-          // Release tugboat
-          tugboatSimulator.updateTugboat(tugboat.id, {
-            status: TugboatStatus.IDLE,
-          });
-          tugboatSimulator.unassignTugboat(tugboat.id);
-
-          const dockingEvent: AssignmentEvent = {
-            vesselId: vessel.id,
-            vesselName: vessel.name,
-            tugboatId: tugboat.id,
-            tugboatName: tugboat.name,
-            timestamp: new Date(),
-            eventType: 'DOCKED',
-          };
-
-          rabbitMQ.publishMovement({
-            type: 'VESSEL_DOCKED',
-            ...dockingEvent,
-            position: { ...dock.position },
-            dockName: dock.name,
-          }).catch((error) => {
-            console.error('Failed to publish docking event:', error);
-          });
-        }
-      });
-
-      // 4. Check for vessels ready to depart and assign tugboats
-      const vesselsReadyToDepart = portService.getVesselsReadyToDepart();
-      vesselsReadyToDepart.forEach((vesselId) => {
-        const vessel = vesselService.getVessel(vesselId);
-        if (!vessel || vessel.status !== VesselStatus.DOCKED) return;
-
-        // Update vessel status to waiting for departure
-        vesselService.updateVessel(vesselId, {
-          status: VesselStatus.WAITING_FOR_DEPARTURE,
-        });
-
-        console.log(`🚢 ${vessel.name} is ready to depart`);
-      });
-
-      // 5. Assign tugboats to vessels waiting for departure
-      const departingVessels = vesselService.getVesselsWaitingForDeparture().filter(
-        v => !v.assignedTugboatId
-      );
-      
-      departingVessels.forEach((vessel) => {
-        const tugboat = assignmentService.findBestAvailableTugboat(
-          tugboatSimulator.getTugboats(),
-          vessel
-        );
-
-        if (tugboat) {
-          const exitPoint = portService.getExitPoint();
-          const event = assignmentService.assignTugboatToVessel(
-            tugboat,
-            vessel
-          );
-
-          if (event) {
-            // Update vessel status FIRST to avoid reassignment
-            vesselService.updateVessel(vessel.id, {
-              assignedTugboatId: tugboat.id,
-              estimatedArrivalTime: event.estimatedArrivalTime,
-            });
-
-            // Then update tugboat status
-            tugboatSimulator.updateTugboat(tugboat.id, {
-              status: TugboatStatus.MOVING,
-            });
-            tugboatSimulator.assignTugboatToVessel(tugboat.id, vessel.id);
-
-            console.log(`🎯 ${tugboat.name} assigned to tow ${vessel.name} to exit`);
-
-            rabbitMQ.publishMovement({
-              type: 'ASSIGNMENT',
-              ...event,
-              destinationType: 'EXIT',
-              destination: exitPoint.name,
-            }).catch((error) => {
-              console.error('Failed to publish departure assignment:', error);
-            });
-          }
-        }
-      });
-
-      // 6. Move tugboats towards vessels waiting for departure
-      const vesselsWaitingDepartureTugboat = vesselService
-        .getVesselsWaitingForDeparture()
-        .filter(v => v.assignedTugboatId);
-
-      vesselsWaitingDepartureTugboat.forEach((vessel) => {
-        if (!vessel.assignedTugboatId) return;
-
-        const tugboat = tugboatSimulator.getTugboat(vessel.assignedTugboatId);
-        if (!tugboat) return;
-
-        // Only move if tugboat is not already assisting
-        if (tugboat.status === TugboatStatus.MOVING) {
-          const arrived = assignmentService.moveTugboatTowardsVessel(
-            tugboat,
-            vessel,
-            SIMULATION_INTERVAL
-          );
-
-          if (arrived) {
-            console.log(
-              `✅ ${tugboat.name} arrived at ${vessel.name} - Starting towing to exit`
+        // CASE 2: Tugboat moving to vessel at entry
+        if (vessel.status === VesselStatus.AT_ENTRY && vessel.assignedTugboatId) {
+          const tugboat = tugboatSimulator.getTugboat(vessel.assignedTugboatId);
+          
+          if (tugboat && tugboat.status === TugboatStatus.MOVING) {
+            // Move tugboat towards vessel
+            const distanceBefore = assignmentService.calculateDistance(tugboat.position, vessel.position);
+            const arrived = assignmentService.moveTugboatTowardsVessel(
+              tugboat,
+              vessel,
+              SIMULATION_INTERVAL
             );
-
-            tugboatSimulator.updateTugboat(tugboat.id, {
-              status: TugboatStatus.ASSISTING,
-            });
-            vesselService.updateVessel(vessel.id, {
-              status: VesselStatus.BEING_TOWED_TO_EXIT,
-            });
-
-            // Release vessel from dock
-            if (vessel.assignedDockId) {
-              portService.releaseVesselFromDock(vessel.id);
+            
+            if (!arrived && Math.random() < 0.05) { // Log 5% of the time to avoid spam
+              console.log(`   🚤 ${tugboat.name} moving to vessel... Distance: ${Math.round(distanceBefore)} -> Pos: (${Math.round(tugboat.position.x)}, ${Math.round(tugboat.position.y)})`);
             }
-
-            rabbitMQ.publishMovement({
-              type: 'TUGBOAT_ARRIVED',
-              vesselId: vessel.id,
-              vesselName: vessel.name,
-              tugboatId: tugboat.id,
-              tugboatName: tugboat.name,
-              timestamp: new Date(),
-              eventType: 'TUGBOAT_ARRIVED',
-            }).catch((error) => {
-              console.error('Failed to publish arrival event:', error);
-            });
-
-            // Schedule towing to exit completion
-            setTimeout(() => {
-              const exitPoint = portService.getExitPoint();
-
-              console.log(
-                `🌊 ${vessel.name} has departed the port via ${exitPoint.name}`
-              );
-
-              // Update vessel position to exit position
-              vesselService.updateVessel(vessel.id, {
-                position: { ...exitPoint.position },
-                status: VesselStatus.DEPARTED,
-                departureTime: new Date(),
-              });
-
+            
+            if (arrived) {
+              // Tugboat reached vessel, start towing to dock
+              tugboat.status = TugboatStatus.ASSISTING;
+              vessel.status = VesselStatus.BEING_TOWED_TO_DOCK;
+              
+              console.log(`\n✅ TUGBOAT ARRIVED: ${tugboat.name} reached ${vessel.name}`);
+              console.log(`   Starting tow to dock ${vessel.assignedDockId}`);
+              console.log(`   Position: (${Math.round(tugboat.position.x)}, ${Math.round(tugboat.position.y)})`);
+              
+              // await rabbitMQ.publishMovement({
+              //   type: 'TUGBOAT_ARRIVED',
+              //   vesselId: vessel.id,
+              //   vesselName: vessel.name,
+              //   tugboatId: tugboat.id,
+              //   tugboatName: tugboat.name,
+              //   timestamp: new Date(),
+              //   eventType: 'TUGBOAT_ARRIVED',
+              // });
+            }
+          }
+        }
+        
+        // CASE 3: Towing vessel to dock
+        if (vessel.status === VesselStatus.BEING_TOWED_TO_DOCK && vessel.assignedDockId) {
+          const tugboat = tugboatSimulator.getTugboat(vessel.assignedTugboatId!);
+          const dock = portService.getDock(vessel.assignedDockId);
+          
+          if (tugboat && dock) {
+            // Move both tugboat and vessel towards dock
+            const distanceBefore = assignmentService.calculateDistance(tugboat.position, dock.position);
+            const arrived = assignmentService.moveTugboatTowardsVessel(
+              tugboat,
+              { position: dock.position } as any,
+              SIMULATION_INTERVAL
+            );
+            
+            // Update vessel position to follow tugboat
+            vessel.position = { ...tugboat.position };
+            
+            if (!arrived && Math.random() < 0.05) { // Log 5% of the time
+              console.log(`   🚢➡️🏗️  Towing ${vessel.name} to dock... Distance: ${Math.round(distanceBefore)} -> Pos: (${Math.round(vessel.position.x)}, ${Math.round(vessel.position.y)})`);
+            }
+            
+            if (arrived) {
+              // Vessel reached dock
+              vessel.status = VesselStatus.DOCKED;
+              vessel.position = { ...dock.position };
+              vessel.dockedAt = new Date();
+              
               // Release tugboat
-              tugboatSimulator.updateTugboat(tugboat.id, {
-                status: TugboatStatus.IDLE,
-              });
+              tugboat.status = TugboatStatus.IDLE;
               tugboatSimulator.unassignTugboat(tugboat.id);
-
-              rabbitMQ.publishMovement({
-                type: 'VESSEL_DEPARTED',
-                vesselId: vessel.id,
-                vesselName: vessel.name,
-                tugboatId: tugboat.id,
-                tugboatName: tugboat.name,
-                timestamp: new Date(),
-                eventType: 'ASSISTANCE_COMPLETE',
-                exitPoint: exitPoint.name,
-              }).catch((error) => {
-                console.error('Failed to publish departure event:', error);
-              });
-
-              // Remove departed vessel after a delay
+              vessel.assignedTugboatId = undefined;
+              
+              console.log(`\n⚓ VESSEL DOCKED: ${vessel.name} docked at ${dock.name}`);
+              console.log(`   Position: (${vessel.position.x}, ${vessel.position.y})`);
+              console.log(`   ${tugboat.name} released and now IDLE`);
+              console.log(`   Will stay for ${DOCK_DURATION / 1000} seconds`);
+              
+              // await rabbitMQ.publishMovement({
+              //   type: 'VESSEL_DOCKED',
+              //   vesselId: vessel.id,
+              //   vesselName: vessel.name,
+              //   tugboatId: tugboat.id,
+              //   tugboatName: tugboat.name,
+              //   timestamp: new Date(),
+              //   eventType: 'DOCKED',
+              //   position: vessel.position,
+              //   dockName: dock.name,
+              // });
+              
+              // Schedule departure
+              setTimeout(() => {
+                if (vessel.status === VesselStatus.DOCKED) {
+                  console.log(`\n🕒 READY TO DEPART: ${vessel.name} ready to leave ${dock.name}`);
+                  console.log(`   Waiting for tugboat assignment...`);
+                  // Vessel will be picked up in next simulation cycle
+                }
+              }, DOCK_DURATION);
+            }
+          }
+        }
+        
+        // CASE 4: Vessel ready to depart (been docked for DOCK_DURATION)
+        if (vessel.status === VesselStatus.DOCKED && 
+            vessel.dockedAt && 
+            Date.now() - vessel.dockedAt.getTime() >= DOCK_DURATION &&
+            !vessel.assignedTugboatId) {
+          
+          const availableTugboat = tugboats.find(t => t.status === TugboatStatus.IDLE);
+          
+          if (availableTugboat) {
+            // Assign tugboat to tow vessel to exit
+            vessel.assignedTugboatId = availableTugboat.id;
+            availableTugboat.status = TugboatStatus.MOVING;
+            
+            tugboatSimulator.assignTugboatToVessel(availableTugboat.id, vessel.id);
+            
+            const exitPoint = portService.getExitPoint();
+            console.log(`\n🎯 ASSIGNMENT TO EXIT: ${availableTugboat.name} assigned to tow ${vessel.name}`);
+            console.log(`   Destination: ${exitPoint.name} at (${exitPoint.position.x}, ${exitPoint.position.y})`);
+            console.log(`   Tugboat at (${Math.round(availableTugboat.position.x)}, ${Math.round(availableTugboat.position.y)})`);
+            console.log(`   Vessel at (${Math.round(vessel.position.x)}, ${Math.round(vessel.position.y)})`);
+            
+            // await rabbitMQ.publishMovement({
+            //   type: 'ASSIGNMENT',
+            //   vesselId: vessel.id,
+            //   vesselName: vessel.name,
+            //   tugboatId: availableTugboat.id,
+            //   tugboatName: availableTugboat.name,
+            //   timestamp: new Date(),
+            //   eventType: 'ASSIGNMENT',
+            //   destinationType: 'EXIT',
+            //   destination: exitPoint.name,
+            // });
+          }
+        }
+        
+        // CASE 5: Tugboat moving to docked vessel for departure
+        if (vessel.status === VesselStatus.DOCKED && vessel.assignedTugboatId) {
+          const tugboat = tugboatSimulator.getTugboat(vessel.assignedTugboatId);
+          
+          if (tugboat && tugboat.status === TugboatStatus.MOVING) {
+            // Move tugboat towards vessel
+            const distanceBefore = assignmentService.calculateDistance(tugboat.position, vessel.position);
+            const arrived = assignmentService.moveTugboatTowardsVessel(
+              tugboat,
+              vessel,
+              SIMULATION_INTERVAL
+            );
+            
+            if (!arrived && Math.random() < 0.05) { // Log 5% of the time
+              console.log(`   🚤 ${tugboat.name} moving to docked vessel... Distance: ${Math.round(distanceBefore)} -> (${Math.round(tugboat.position.x)}, ${Math.round(tugboat.position.y)})`);
+            }
+            
+            if (arrived) {
+              // Tugboat reached vessel, start towing to exit
+              tugboat.status = TugboatStatus.ASSISTING;
+              vessel.status = VesselStatus.BEING_TOWED_TO_EXIT;
+              
+              // Release dock
+              if (vessel.assignedDockId) {
+                portService.releaseVesselFromDock(vessel.id);
+                vessel.assignedDockId = undefined;
+              }
+              
+              console.log(`\n✅ TUGBOAT ARRIVED AT DOCK: ${tugboat.name} reached ${vessel.name}`);
+              console.log(`   Starting tow to exit`);
+              console.log(`   Position: (${Math.round(tugboat.position.x)}, ${Math.round(tugboat.position.y)})`);
+              
+              // await rabbitMQ.publishMovement({
+              //   type: 'TUGBOAT_ARRIVED',
+              //   vesselId: vessel.id,
+              //   vesselName: vessel.name,
+              //   tugboatId: tugboat.id,
+              //   tugboatName: tugboat.name,
+              //   timestamp: new Date(),
+              //   eventType: 'TUGBOAT_ARRIVED',
+              // });
+            }
+          }
+        }
+        
+        // CASE 6: Towing vessel to exit
+        if (vessel.status === VesselStatus.BEING_TOWED_TO_EXIT) {
+          const tugboat = tugboatSimulator.getTugboat(vessel.assignedTugboatId!);
+          const exitPoint = portService.getExitPoint();
+          
+          if (tugboat && exitPoint) {
+            // Move both tugboat and vessel towards exit
+            const distanceBefore = assignmentService.calculateDistance(tugboat.position, exitPoint.position);
+            const arrived = assignmentService.moveTugboatTowardsVessel(
+              tugboat,
+              { position: exitPoint.position } as any,
+              SIMULATION_INTERVAL
+            );
+            
+            // Update vessel position to follow tugboat
+            vessel.position = { ...tugboat.position };
+            
+            if (!arrived && Math.random() < 0.05) { // Log 5% of the time
+              console.log(`   🚢➡️🌊 Towing ${vessel.name} to exit... Distance: ${Math.round(distanceBefore)} -> Pos: (${Math.round(vessel.position.x)}, ${Math.round(vessel.position.y)})`);
+            }
+            
+            if (arrived) {
+              // Vessel reached exit
+              vessel.status = VesselStatus.DEPARTED;
+              vessel.position = { ...exitPoint.position };
+              vessel.departureTime = new Date();
+              
+              console.log(`\n🌊 VESSEL DEPARTED: ${vessel.name} departed via ${exitPoint.name}`);
+              console.log(`   Exit position: (${exitPoint.position.x}, ${exitPoint.position.y})`);
+              console.log(`   ${tugboat.name} released and now IDLE`);
+              
+              // await rabbitMQ.publishMovement({
+              //   type: 'VESSEL_DEPARTED',
+              //   vesselId: vessel.id,
+              //   vesselName: vessel.name,
+              //   tugboatId: tugboat.id,
+              //   tugboatName: tugboat.name,
+              //   timestamp: new Date(),
+              //   eventType: 'ASSISTANCE_COMPLETE',
+              //   exitPoint: exitPoint.name,
+              // });
+              
+              // Release tugboat
+              tugboat.status = TugboatStatus.IDLE;
+              tugboatSimulator.unassignTugboat(tugboat.id);
+              
+              // Remove vessel after a short delay
               setTimeout(() => {
                 vesselService.removeVessel(vessel.id);
+                console.log(`🗑️  ${vessel.name} removed from simulation`);
               }, 5000);
-            }, TOWING_TO_EXIT_DURATION);
+            }
           }
         }
-      });
+      }
 
-      // Publish real-time position updates for all tugboats (throttled)
+      // CASE 7: Move idle tugboats to base
+      for (const tugboat of tugboats) {
+        if (tugboat.status === TugboatStatus.IDLE) {
+          const tugboatBase = portService.getTugboatBase();
+          const distanceToBase = assignmentService.calculateDistance(tugboat.position, tugboatBase.position);
+          
+          // Only move if not already at base (distance > 5 units)
+          if (distanceToBase > 5) {
+            assignmentService.moveTugboatTowardsVessel(
+              tugboat,
+              { position: tugboatBase.position } as any,
+              SIMULATION_INTERVAL
+            );
+            
+            // Log occasionally to avoid spam
+            if (Math.random() < 0.02) {
+              console.log(`   🏠 ${tugboat.name} returning to base... Distance: ${Math.round(distanceToBase)}`);
+            }
+          }
+        }
+      }
+
+      // Publish vessel and tugboat positions every 1 second
       const now = Date.now();
-      if (now - lastPositionUpdateTime >= POSITION_UPDATE_INTERVAL) {
-        lastPositionUpdateTime = now;
-        
-        tugboatSimulator.getTugboats().forEach((tugboat) => {
+      if (now - lastVesselPositionPublishTime >= 1000) {
+        lastVesselPositionPublishTime = now;
+        for (const vessel of vessels) {
+          await rabbitMQ.publishMovement({
+            type: 'VESSEL_POSITION',
+            vesselId: vessel.id,
+            vesselName: vessel.name,
+            vesselType: vessel.type,
+            position: { ...vessel.position },
+            status: vessel.status,
+            timestamp: new Date(),
+          });
+        }
+        for (const tugboat of tugboats) {
           const assignment = tugboatSimulator.getAssignment(tugboat.id);
           const movementEvent = tugboatSimulator.createMovementEvent(
             tugboat,
             assignment?.vesselId
           );
-          
-          rabbitMQ.publishMovement({
+
+          await rabbitMQ.publishMovement({
             type: 'TUGBOAT_POSITION',
             ...movementEvent,
-          }).catch((error) => {
-            console.error('Failed to publish tugboat position:', error);
           });
-        });
-
-        // Publish port status periodically
-        const portStatus = portService.getPortStatus();
-        rabbitMQ.publishMovement({
-          type: 'PORT_STATUS',
-          ...portStatus,
-          timestamp: new Date(),
-        }).catch((error) => {
-          console.error('Failed to publish port status:', error);
-        });
+        }
       }
+      
     }, SIMULATION_INTERVAL);
 
     process.on('SIGINT', async () => {

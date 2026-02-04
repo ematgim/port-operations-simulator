@@ -14,9 +14,14 @@
                 <div class="header-status">
                     <span class="status-indicator" id="connection-status"></span>
                     <span id="status-text">Connecting...</span>
+                    <button onclick="toggleDebugPanel()" style="margin-left: 20px; padding: 5px 10px; cursor: pointer;">🔍 Debug</button>
                 </div>
             </div>
         </header>
+
+        <div id="debug-panel" style="display: none; position: fixed; bottom: 10px; right: 10px; background: #1a1a1a; color: #00ff00; max-width: 400px; height: 300px; overflow-y: auto; font-family: monospace; font-size: 11px; border: 2px solid #00ff00; padding: 10px; z-index: 1000;">
+            <div id="debug-logs" style="white-space: pre-wrap; word-break: break-all;"></div>
+        </div>
 
         <div class="main-container">
             <aside class="sidebar">

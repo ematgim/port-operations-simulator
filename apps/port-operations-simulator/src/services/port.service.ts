@@ -6,7 +6,7 @@ export class PortService {
   private dockAssignments: Map<string, DockAssignment> = new Map();
   
   // Tiempo que un buque permanece en el dock (en milisegundos)
-  private readonly DOCK_DURATION = 60000; // 60 segundos
+  private readonly DOCK_DURATION = 120000; // 120 segundos (2 minutos)
 
   constructor() {
     this.initializePortLocations();
@@ -75,10 +75,19 @@ export class PortService {
       type: LocationType.EXIT_POINT,
     };
 
+    // Base de remolcadores (centro del puerto)
+    const tugboatBase: PortLocation = {
+      id: 'TUGBOAT_BASE_01',
+      name: 'Base de Remolcadores',
+      position: { x: 500, y: 500 },
+      type: LocationType.TUGBOAT_BASE,
+    };
+
     // Agregar todas las ubicaciones al mapa
     this.locations.set(entryPoint.id, entryPoint);
     docks.forEach(dock => this.locations.set(dock.id, dock));
     this.locations.set(exitPoint.id, exitPoint);
+    this.locations.set(tugboatBase.id, tugboatBase);
 
     console.log(`⚓ Puerto inicializado con:`);
     console.log(`   - 1 punto de entrada: ${entryPoint.name}`);
@@ -97,7 +106,11 @@ export class PortService {
       loc => loc.type === LocationType.EXIT_POINT
     )!;
   }
-
+  getTugboatBase(): PortLocation {
+    return Array.from(this.locations.values()).find(
+      (loc) => loc.type === LocationType.TUGBOAT_BASE
+    )!;
+  }
   getAllDocks(): PortLocation[] {
     return Array.from(this.locations.values()).filter(
       loc => loc.type === LocationType.DOCK
