@@ -15,10 +15,10 @@ const App: React.FC = () => {
       <Header connected={connected} onToggleDebug={() => setShowDebug(!showDebug)} />
       <DebugPanel visible={showDebug} logs={debugLogs} />
       <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
-        <Sidebar tugboats={tugboats} vessels={vessels} />
         <main className="flex-1 relative bg-bg-primary">
           <PortMap tugboats={tugboats} vessels={vessels} />
         </main>
+        <Sidebar tugboats={tugboats} vessels={vessels} />
       </div>
     </div>
   );

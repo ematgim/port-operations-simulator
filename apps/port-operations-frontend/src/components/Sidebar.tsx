@@ -20,7 +20,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ tugboats, vessels }) => {
   );
 
   return (
-    <aside className="w-full md:w-80 lg:w-96 bg-bg-secondary border-r-2 border-border-color overflow-y-auto p-6">
+    <aside className="w-full md:w-80 lg:w-96 bg-bg-secondary border-l-2 border-border-color overflow-y-auto p-6">
       {/* Statistics Panel */}
       <div className="mb-8">
         <h2 className="text-lg font-semibold mb-4 text-accent-primary">📊 Statistics</h2>
