@@ -81,6 +81,7 @@ rabbitMQConsumer.on('vessel-request', (vessel: any) => {
     vesselType: vessel.vesselType,
     position: vessel.position,
     status: vessel.status || 'REQUESTING_ASSISTANCE',
+    assignedDockId: vessel.assignedDockId,
   };
   stateManager.updateVessel(vesselData);
   broadcast({

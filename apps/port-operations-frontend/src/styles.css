@@ -53,3 +53,29 @@
 .stats-panel {
   display: none !important;
 }
+
+/* Custom Scrollbar Styles */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--color-accent-primary);
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #00b8e6;
+}
+
+/* Firefox scrollbar */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-accent-primary) var(--color-bg-secondary);
+}

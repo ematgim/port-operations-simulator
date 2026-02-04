@@ -16,6 +16,7 @@ export interface VesselPosition {
   position: { x: number; y: number };
   status: string;
   assignedTugboatId?: string;
+  assignedDockId?: string;
   estimatedArrivalTime?: Date;
 }
 

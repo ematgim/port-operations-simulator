@@ -415,6 +415,7 @@ async function main() {
               vesselType: vessel.type,
               position: { ...vessel.position },
               status: vessel.status,
+              assignedDockId: vessel.assignedDockId,
               timestamp: new Date(),
             });
           }

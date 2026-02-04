@@ -2,6 +2,16 @@ import React from 'react';
 import { Tugboat, Vessel } from '../types';
 import { Badge } from './ui/Badge';
 
+// Dock names map
+const DOCK_NAMES: Record<string, string> = {
+  'DOCK_01': 'Muelle A1',
+  'DOCK_02': 'Muelle A2',
+  'DOCK_03': 'Muelle B1',
+  'DOCK_04': 'Muelle B2',
+  'DOCK_05': 'Muelle C1',
+  'DOCK_06': 'Muelle C2',
+};
+
 interface SidebarProps {
   tugboats: Map<string, Tugboat>;
   vessels: Map<string, Vessel>;
@@ -98,26 +108,47 @@ export const Sidebar: React.FC<SidebarProps> = ({ tugboats, vessels }) => {
       {/* Tugboats List */}
       <div className="mb-8">
         <h2 className="text-lg font-semibold mb-4 text-accent-primary">🚤 Tugboats</h2>
-        <div className="space-y-1 max-h-72 overflow-y-auto">
+        <div className="space-y-1 max-h-72 overflow-y-auto custom-scrollbar">
           {sortedTugboats.length === 0 ? (
             <div className="text-center py-8 text-text-secondary text-sm">No tugboats</div>
           ) : (
-            sortedTugboats.map((tugboat) => (
-              <div
-                key={tugboat.tugboatId}
-                className="bg-bg-tertiary p-2 rounded-md text-sm hover:bg-opacity-80 transition-all duration-200 cursor-pointer"
-              >
-                <div className="flex justify-between items-start">
-                  <div className="font-semibold text-base">{tugboat.tugboatName}</div>
-                  <Badge status={tugboat.status} />
-                </div>
-                {tugboat.assignedVesselId && (
-                  <div className="text-text-secondary text-xs leading-relaxed">
-                    → {tugboat.assignedVesselId}
+            sortedTugboats.map((tugboat) => {
+              const assignedVessel = tugboat.assignedVesselId ? vessels.get(tugboat.assignedVesselId) : null;
+              
+              return (
+                <div
+                  key={tugboat.tugboatId}
+                  className="bg-bg-tertiary p-2 rounded-md text-sm hover:bg-opacity-80 transition-all duration-200 cursor-pointer"
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="font-semibold text-base">{tugboat.tugboatName}</div>
+                    <Badge status={tugboat.status} />
                   </div>
-                )}
-              </div>
-            ))
+                  {tugboat.status === 'MOVING' && assignedVessel && (
+                    <div className="text-text-secondary text-xs leading-relaxed flex items-center gap-1 mt-1">
+                      <span>→</span>
+                      <span>{assignedVessel.vesselName}</span>
+                    </div>
+                  )}
+                  {tugboat.status === 'ASSISTING' && assignedVessel && (
+                    <div className="text-text-secondary text-xs leading-relaxed flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-1">
+                        <span>⚓</span>
+                        <span>{assignedVessel.vesselName}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span>{assignedVessel.status === 'BEING_TOWED_TO_DOCK' ? '📍' : '→'}</span>
+                        <span>
+                          {assignedVessel.status === 'BEING_TOWED_TO_DOCK' 
+                            ? (assignedVessel.assignedDockId ? DOCK_NAMES[assignedVessel.assignedDockId] || 'Dock' : 'Dock')
+                            : 'Exit'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
       </div>
@@ -125,7 +156,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ tugboats, vessels }) => {
       {/* Vessels List */}
       <div>
         <h2 className="text-lg font-semibold mb-4 text-accent-primary">⚓ Vessels</h2>
-        <div className="space-y-1 max-h-72 overflow-y-auto">
+        <div className="space-y-1 max-h-72 overflow-y-auto custom-scrollbar">
           {sortedVessels.length === 0 ? (
             <div className="text-center py-8 text-text-secondary text-sm">No vessels</div>
           ) : (
@@ -136,10 +167,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ tugboats, vessels }) => {
               >
                 <div className="flex justify-between items-start">
                   <div>
-                    <div className="font-semibold text-base">{vessel.vesselName}</div>
-                    <div className="text-text-secondary text-xs mt-0.5">
-                      {vessel.vesselImo}
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-semibold text-base">{vessel.vesselName}</span>
+                      <span className="text-text-secondary text-[10px]">{vessel.vesselImo}</span>
                     </div>
+                    {vessel.assignedDockId && (vessel.status === 'DOCKED' || vessel.status === 'BEING_TOWED_TO_DOCK') && (
+                      <div className="text-text-secondary text-xs mt-0.5">
+                        📍 {DOCK_NAMES[vessel.assignedDockId] || vessel.assignedDockId}
+                      </div>
+                    )}
                   </div>
                   <Badge status={vessel.status} />
                 </div>

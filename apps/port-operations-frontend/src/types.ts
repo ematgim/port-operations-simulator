@@ -21,6 +21,7 @@ export interface Vessel {
   position: Position;
   status: 'AT_ENTRY' | 'BEING_TOWED_TO_DOCK' | 'BEING_TOWED_TO_EXIT' | 'DOCKED' | 'DEPARTED' | 'REQUESTING_ASSISTANCE' | 'WAITING_FOR_TUGBOAT' | 'BEING_ASSISTED' | 'UNKNOWN';
   assignedTugboatId?: string;
+  assignedDockId?: string;
   timestamp: Date;
 }
 
