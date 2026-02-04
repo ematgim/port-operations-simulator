@@ -7,6 +7,7 @@ import { TugboatStatus } from './models/tugboat.model';
 import { VesselStatus } from './models/vessel.model';
 
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://localhost';
+const PUBLISH_EVENTS = process.env.PUBLISH_EVENTS === 'true';
 const SIMULATION_INTERVAL = parseInt(
   process.env.SIMULATION_INTERVAL || '100',
   10
@@ -19,13 +20,19 @@ const DOCK_DURATION = parseInt(
   process.env.DOCK_DURATION || '60000',
   10
 );
+const POSITION_PUBLISH_INTERVAL = parseInt(
+  process.env.POSITION_PUBLISH_INTERVAL || '1000',
+  10
+);
 
 async function main() {
   console.log('🚢 Port Operations Simulator Starting...');
   console.log(`📡 RabbitMQ URL: ${RABBITMQ_URL}`);
+  console.log(`📢 Publish Events: ${PUBLISH_EVENTS}`);
   console.log(`⏱️  Simulation Interval: ${SIMULATION_INTERVAL}ms`);
   console.log(`🚢 Vessel Spawn Interval: ${VESSEL_SPAWN_INTERVAL}ms`);
   console.log(`⏱️  Dock Duration: ${DOCK_DURATION}ms`);
+  console.log(`📍 Position Publish Interval: ${POSITION_PUBLISH_INTERVAL}ms`);
 
   const rabbitMQ = new RabbitMQService();
   const portService = new PortService();
@@ -136,17 +143,19 @@ async function main() {
             console.log(`   Vessel at (${Math.round(vessel.position.x)}, ${Math.round(vessel.position.y)})`);
             console.log(`   Dock at (${availableDock.position.x}, ${availableDock.position.y})`);
             
-            // await rabbitMQ.publishMovement({
-            //   type: 'ASSIGNMENT',
-            //   vesselId: vessel.id,
-            //   vesselName: vessel.name,
-            //   tugboatId: availableTugboat.id,
-            //   tugboatName: availableTugboat.name,
-            //   timestamp: new Date(),
-            //   eventType: 'ASSIGNMENT',
-            //   destinationType: 'DOCK',
-            //   destination: availableDock.name,
-            // });
+            if (PUBLISH_EVENTS) {
+              await rabbitMQ.publishMovement({
+                type: 'ASSIGNMENT',
+                vesselId: vessel.id,
+                vesselName: vessel.name,
+                tugboatId: availableTugboat.id,
+                tugboatName: availableTugboat.name,
+                timestamp: new Date(),
+                eventType: 'ASSIGNMENT',
+                destinationType: 'DOCK',
+                destination: availableDock.name,
+              });
+            }
           }
         }
         
@@ -176,15 +185,17 @@ async function main() {
               console.log(`   Starting tow to dock ${vessel.assignedDockId}`);
               console.log(`   Position: (${Math.round(tugboat.position.x)}, ${Math.round(tugboat.position.y)})`);
               
-              // await rabbitMQ.publishMovement({
-              //   type: 'TUGBOAT_ARRIVED',
-              //   vesselId: vessel.id,
-              //   vesselName: vessel.name,
-              //   tugboatId: tugboat.id,
-              //   tugboatName: tugboat.name,
-              //   timestamp: new Date(),
-              //   eventType: 'TUGBOAT_ARRIVED',
-              // });
+              if (PUBLISH_EVENTS) {
+                await rabbitMQ.publishMovement({
+                  type: 'TUGBOAT_ARRIVED',
+                  vesselId: vessel.id,
+                  vesselName: vessel.name,
+                  tugboatId: tugboat.id,
+                  tugboatName: tugboat.name,
+                  timestamp: new Date(),
+                  eventType: 'TUGBOAT_ARRIVED',
+                });
+              }
             }
           }
         }
@@ -226,17 +237,19 @@ async function main() {
               console.log(`   ${tugboat.name} released and now IDLE`);
               console.log(`   Will stay for ${DOCK_DURATION / 1000} seconds`);
               
-              // await rabbitMQ.publishMovement({
-              //   type: 'VESSEL_DOCKED',
-              //   vesselId: vessel.id,
-              //   vesselName: vessel.name,
-              //   tugboatId: tugboat.id,
-              //   tugboatName: tugboat.name,
-              //   timestamp: new Date(),
-              //   eventType: 'DOCKED',
-              //   position: vessel.position,
-              //   dockName: dock.name,
-              // });
+              if (PUBLISH_EVENTS) {
+                await rabbitMQ.publishMovement({
+                  type: 'VESSEL_DOCKED',
+                  vesselId: vessel.id,
+                  vesselName: vessel.name,
+                  tugboatId: tugboat.id,
+                  tugboatName: tugboat.name,
+                  timestamp: new Date(),
+                  eventType: 'DOCKED',
+                  position: vessel.position,
+                  dockName: dock.name,
+                });
+              }
               
               // Schedule departure
               setTimeout(() => {
@@ -284,15 +297,17 @@ async function main() {
               console.log(`   Starting tow to exit`);
               console.log(`   Position: (${Math.round(tugboat.position.x)}, ${Math.round(tugboat.position.y)})`);
               
-              // await rabbitMQ.publishMovement({
-              //   type: 'TUGBOAT_ARRIVED',
-              //   vesselId: vessel.id,
-              //   vesselName: vessel.name,
-              //   tugboatId: tugboat.id,
-              //   tugboatName: tugboat.name,
-              //   timestamp: new Date(),
-              //   eventType: 'TUGBOAT_ARRIVED',
-              // });
+              if (PUBLISH_EVENTS) {
+                await rabbitMQ.publishMovement({
+                  type: 'TUGBOAT_ARRIVED',
+                  vesselId: vessel.id,
+                  vesselName: vessel.name,
+                  tugboatId: tugboat.id,
+                  tugboatName: tugboat.name,
+                  timestamp: new Date(),
+                  eventType: 'TUGBOAT_ARRIVED',
+                });
+              }
             }
           }
         }
@@ -328,16 +343,18 @@ async function main() {
               console.log(`   Exit position: (${exitPoint.position.x}, ${exitPoint.position.y})`);
               console.log(`   ${tugboat.name} released and now IDLE`);
               
-              // await rabbitMQ.publishMovement({
-              //   type: 'VESSEL_DEPARTED',
-              //   vesselId: vessel.id,
-              //   vesselName: vessel.name,
-              //   tugboatId: tugboat.id,
-              //   tugboatName: tugboat.name,
-              //   timestamp: new Date(),
-              //   eventType: 'ASSISTANCE_COMPLETE',
-              //   exitPoint: exitPoint.name,
-              // });
+              if (PUBLISH_EVENTS) {
+                await rabbitMQ.publishMovement({
+                  type: 'VESSEL_DEPARTED',
+                  vesselId: vessel.id,
+                  vesselName: vessel.name,
+                  tugboatId: tugboat.id,
+                  tugboatName: tugboat.name,
+                  timestamp: new Date(),
+                  eventType: 'ASSISTANCE_COMPLETE',
+                  exitPoint: exitPoint.name,
+                });
+              }
               
               // Release tugboat
               tugboat.status = TugboatStatus.IDLE;
@@ -382,31 +399,33 @@ async function main() {
       }
 
       // Publish vessel and tugboat positions every 1 second
-      const now = Date.now();
-      if (now - lastVesselPositionPublishTime >= 1000) {
-        lastVesselPositionPublishTime = now;
-        for (const vessel of vessels) {
-          await rabbitMQ.publishMovement({
-            type: 'VESSEL_POSITION',
-            vesselId: vessel.id,
-            vesselName: vessel.name,
-            vesselType: vessel.type,
-            position: { ...vessel.position },
-            status: vessel.status,
-            timestamp: new Date(),
-          });
-        }
-        for (const tugboat of tugboats) {
-          const assignment = tugboatSimulator.getAssignment(tugboat.id);
-          const movementEvent = tugboatSimulator.createMovementEvent(
-            tugboat,
-            assignment?.vesselId
-          );
+      if (PUBLISH_EVENTS) {
+        const now = Date.now();
+        if (now - lastVesselPositionPublishTime >= POSITION_PUBLISH_INTERVAL) {
+          lastVesselPositionPublishTime = now;
+          for (const vessel of vessels) {
+            await rabbitMQ.publishMovement({
+              type: 'VESSEL_POSITION',
+              vesselId: vessel.id,
+              vesselName: vessel.name,
+              vesselType: vessel.type,
+              position: { ...vessel.position },
+              status: vessel.status,
+              timestamp: new Date(),
+            });
+          }
+          for (const tugboat of tugboats) {
+            const assignment = tugboatSimulator.getAssignment(tugboat.id);
+            const movementEvent = tugboatSimulator.createMovementEvent(
+              tugboat,
+              assignment?.vesselId
+            );
 
-          await rabbitMQ.publishMovement({
-            type: 'TUGBOAT_POSITION',
-            ...movementEvent,
-          });
+            await rabbitMQ.publishMovement({
+              type: 'TUGBOAT_POSITION',
+              ...movementEvent,
+            });
+          }
         }
       }
       
